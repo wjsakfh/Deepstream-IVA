@@ -26,6 +26,11 @@ MIN_CONFIDENCE = 0.3
 MAX_CONFIDENCE = 0.4
 
 
+class inference_parameter:
+    def __init__(self):
+        self.folder_name: str
+
+
 def layer_finder(output_layer_info, name):
     """Return the layer contained in output_layer_info which corresponds
     to the given name.
@@ -121,12 +126,8 @@ def create_source_bin(index, uri):
     return nbin
 
 
-class inference_parameter:
-    def __init__(self):
-        self.folder_name: str
-
-
 def tiler_sink_pad_buffer_probe(pad, info, u_data):
+    pipeline_msg_protocol = {}
     frame_number = 0
     num_rects = 0
     gst_buffer = info.get_buffer()
@@ -138,83 +139,121 @@ def tiler_sink_pad_buffer_probe(pad, info, u_data):
     # Note that pyds.gst_buffer_get_nvds_batch_meta() expects the
     # C address of gst_buffer as input, which is obtained with hash(gst_buffer)
     batch_meta = pyds.gst_buffer_get_nvds_batch_meta(hash(gst_buffer))
-
     l_frame = batch_meta.frame_meta_list
+    # print("l_frame", dir(l_frame))
+    # print("l_frame.data", l_frame.data)
+    # print("l_frame.next", l_frame.next)
     while l_frame is not None:
+        print("l_frame.data1", l_frame.data)
+
         try:
-            # Note that l_frame.data needs a cast to pyds.NvDsFrameMeta
-            # The casting is done by pyds.NvDsFrameMeta.cast()
-            # The casting also keeps ownership of the underlying memory
-            # in the C code, so the Python garbage collector will leave
-            # it alone.
             frame_meta = pyds.NvDsFrameMeta.cast(l_frame.data)
         except StopIteration:
             break
 
-        frame_number = frame_meta.frame_num
+        print("frame_meta", frame_meta)
         l_obj = frame_meta.obj_meta_list
-        num_rects = frame_meta.num_obj_meta
-        is_first_obj = True
-        save_image = False
-        obj_counter = {
-            PGIE_CLASS_ID_PERSON: 0,
-        }
         while l_obj is not None:
-            try:
-                # Casting l_obj.data to pyds.NvDsObjectMeta
-                obj_meta = pyds.NvDsObjectMeta.cast(l_obj.data)
-            except StopIteration:
-                break
-            obj_counter[obj_meta.class_id] += 1
-            # Periodically check for objects with borderline confidence value that may be false positive detections.
-            # If such detections are found, annotate the frame with bboxes and confidence value.
-            # Save the annotated frame to file.
-            print("obj_meta", obj_meta)
-            if saved_count["stream_{}".format(frame_meta.pad_index)] % 30 == 0 and (
-                MIN_CONFIDENCE < obj_meta.confidence
-            ):
-                if is_first_obj:
-                    is_first_obj = False
-                    # Getting Image data using nvbufsurface
-                    # the input should be address of buffer and batch_id
-                    n_frame = pyds.get_nvds_buf_surface(
-                        hash(gst_buffer), frame_meta.batch_id
-                    )
-                    n_frame = draw_bounding_boxes(
-                        n_frame, obj_meta, obj_meta.confidence
-                    )
-                    # convert python array into numpy array format in the copy mode.
-                    frame_copy = np.array(n_frame, copy=True, order="C")
-                    # convert the array into cv2 default color format
-                    frame_copy = cv2.cvtColor(frame_copy, cv2.COLOR_RGBA2BGRA)
-
-                save_image = True
 
             try:
                 l_obj = l_obj.next
             except StopIteration:
                 break
-
-        print(
-            "Frame Number=",
-            frame_number,
-            "Number of Objects=",
-            num_rects,
-            "Person_count=",
-            obj_counter[PGIE_CLASS_ID_PERSON],
-        )
-        # Get frame rate through this probe
-        fps_streams["stream{0}".format(frame_meta.pad_index)].get_fps()
-        if save_image:
-            img_path = "{}/stream_{}/frame_{}.jpg".format(
-                inference_parameter.folder_name, frame_meta.pad_index, frame_number
-            )
-            cv2.imwrite(img_path, frame_copy)
-        saved_count["stream_{}".format(frame_meta.pad_index)] += 1
         try:
-            l_frame = l_frame.next
+            l_frame.next
         except StopIteration:
             break
+
+        print("l_frame.data2", l_frame.data)
+
+    # for frame in l_frame:
+    #     print()
+
+    # while l_frame is not None:
+    #     try:
+    #         # Note that l_frame.data needs a cast to pyds.NvDsFrameMeta
+    #         # The casting is done by pyds.NvDsFrameMeta.cast()
+    #         # The casting also keeps ownership of the underlying memory
+    #         # in the C code, so the Python garbage collector will leave
+    #         # it alone.
+    #         frame_meta = pyds.NvDsFrameMeta.cast(l_frame.data)
+    #     except StopIteration:
+    #         break
+
+    #     frame_number = frame_meta.frame_num
+    #     l_obj = frame_meta.obj_meta_list
+    #     num_rects = frame_meta.num_obj_meta
+    #     is_first_obj = True
+    #     save_image = False
+    #     obj_counter = {
+    #         PGIE_CLASS_ID_PERSON: 0,
+    #     }
+    #     while l_obj is not None:
+    #         try:
+    #             # Casting l_obj.data to pyds.NvDsObjectMeta
+    #             obj_meta = pyds.NvDsObjectMeta.cast(l_obj.data)
+    #         except StopIteration:
+    #             break
+
+    #         # print("obj_meta.class_id", obj_meta.class_id)
+    # print("obj_meta.object_id", obj_meta.object_id)
+    #         # print("obj_meta.confidence", obj_meta.confidence)
+    #         # print("obj_meta.tracker_confidence", obj_meta.tracker_confidence)
+    #         # print("obj_meta.rect_params", obj_meta.rect_params)
+    #         # print("obj_meta.detector_bbox_info", obj_meta.detector_bbox_info)
+    #         # print("obj_meta.classifier_meta_list", obj_meta.classifier_meta_list)
+
+    #         # obj_counter[obj_meta.class_id] += 1
+    #         # Periodically check for objects with borderline confidence value that may be false positive detections.
+    #         # If such detections are found, annotate the frame with bboxes and confidence value.
+    #         # Save the annotated frame to file.
+
+    #         # if saved_count["stream_{}".format(frame_meta.pad_index)] % 30 == 0 and (
+    #         #     MIN_CONFIDENCE < obj_meta.confidence
+    #         # ):
+    #         #     if is_first_obj:
+    #         #         is_first_obj = False
+    #         #         # Getting Image data using nvbufsurface
+    #         #         # the input should be address of buffer and batch_id
+    #         #         n_frame = pyds.get_nvds_buf_surface(
+    #         #             hash(gst_buffer), frame_meta.batch_id
+    #         #         )
+    #         #         n_frame = draw_bounding_boxes(
+    #         #             n_frame, obj_meta, obj_meta.confidence
+    #         #         )
+    #         #         # convert python array into numpy array format in the copy mode.
+    #         #         frame_copy = np.array(n_frame, copy=True, order="C")
+    #         #         # convert the array into cv2 default color format
+    #         #         frame_copy = cv2.cvtColor(frame_copy, cv2.COLOR_RGBA2BGRA)
+
+    #         #     save_image = True
+
+    #         try:
+    #             l_obj = l_obj.next
+    #         except StopIteration:
+    #             break
+
+    #     # print(
+    #     #     "Frame Number=",
+    #     #     frame_number,
+    #     #     "Number of Objects=",
+    #     #     num_rects,
+    #     #     "Person_count=",
+    #     #     obj_counter[PGIE_CLASS_ID_PERSON],
+    #     # )
+    #     # Get frame rate through this probe
+    #     # fps_streams["stream{0}".format(frame_meta.pad_index)].get_fps()
+    #     # if save_image:
+    #     #     img_path = "{}/stream_{}/frame_{}.jpg".format(
+    #     #         inference_parameter.folder_name, frame_meta.pad_index, frame_number
+    #     #     )
+    #     #     cv2.imwrite(img_path, frame_copy)
+    #     # saved_count["stream_{}".format(frame_meta.pad_index)] += 1
+
+    #     try:
+    #         l_frame = l_frame.next
+    #     except StopIteration:
+    #         break
 
     return Gst.PadProbeReturn.OK
 

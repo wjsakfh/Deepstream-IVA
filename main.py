@@ -36,15 +36,15 @@ def main(args):
     folder_name = args[-1]
     inference_parameter.folder_name = folder_name
 
-    if path.exists(folder_name):
-        sys.stderr.write(
-            "The output folder %s already exists. Please remove it first.\n"
-            % folder_name
-        )
-        sys.exit(1)
+    # if path.exists(folder_name):
+    #     sys.stderr.write(
+    #         "The output folder %s already exists. Please remove it first.\n"
+    #         % folder_name
+    #     )
+    #     sys.exit(1)
 
-    os.mkdir(folder_name)
-    print("Frames will be saved in ", folder_name)
+    # os.mkdir(folder_name)
+    # print("Frames will be saved in ", folder_name)
     # Standard GStreamer initialization
     GObject.threads_init()
     Gst.init(None)
@@ -66,7 +66,7 @@ def main(args):
 
     pipeline.add(streammux)
     for i in range(number_sources):
-        os.mkdir(folder_name + "/stream_" + str(i))
+        # os.mkdir(folder_name + "/stream_" + str(i))
         frame_count["stream_" + str(i)] = 0
         saved_count["stream_" + str(i)] = 0
         print("Creating source_bin ", i, " \n ")
