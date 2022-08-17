@@ -73,6 +73,8 @@ def main(args):
         uri_name = args[i + 1]
         if uri_name.find("rtsp://") == 0:
             is_live = True
+        else:
+            is_live = False
         source_bin = create_source_bin(i, uri_name)
         if not source_bin:
             sys.stderr.write("Unable to create source bin \n")
@@ -89,6 +91,11 @@ def main(args):
     pgie = Gst.ElementFactory.make("nvinfer", "primary-inference")
     if not pgie:
         sys.stderr.write(" Unable to create pgie \n")
+
+    tracker = Gst.ElementFactory.make("nvtracker", "tracker")
+    if not tracker:
+        sys.stderr.write(" Unable to create tracker \n")
+
     # Add nvvidconv1 and filter1 to convert the frames to RGBA
     # which is easier to work with in Python.
     print("Creating nvvidconv1 \n ")
@@ -164,20 +171,52 @@ def main(args):
         nvvidconv1.set_property("nvbuf-memory-type", mem_type)
         tiler.set_property("nvbuf-memory-type", mem_type)
 
+    # Set properties of tracker
+    config = configparser.ConfigParser()
+    config.read(
+        "/home/snu-nx2/Works/Deepstream-IVA/inference_source/tracker/dstest2_tracker_config.txt"
+    )
+    config.sections()
+
+    for key in config["tracker"]:
+        if key == "tracker-width":
+            tracker_width = config.getint("tracker", key)
+            tracker.set_property("tracker-width", tracker_width)
+        if key == "tracker-height":
+            tracker_height = config.getint("tracker", key)
+            tracker.set_property("tracker-height", tracker_height)
+        if key == "gpu-id":
+            tracker_gpu_id = config.getint("tracker", key)
+            tracker.set_property("gpu_id", tracker_gpu_id)
+        if key == "ll-lib-file":
+            tracker_ll_lib_file = config.get("tracker", key)
+            tracker.set_property("ll-lib-file", tracker_ll_lib_file)
+        if key == "ll-config-file":
+            tracker_ll_config_file = config.get("tracker", key)
+            tracker.set_property("ll-config-file", tracker_ll_config_file)
+        if key == "enable-batch-process":
+            tracker_enable_batch_process = config.getint("tracker", key)
+            tracker.set_property("enable_batch_process", tracker_enable_batch_process)
+        if key == "enable-past-frame":
+            tracker_enable_past_frame = config.getint("tracker", key)
+            tracker.set_property("enable_past_frame", tracker_enable_past_frame)
+
     print("Adding elements to Pipeline \n")
     pipeline.add(pgie)
+    pipeline.add(tracker)
     pipeline.add(tiler)
     pipeline.add(nvvidconv)
     pipeline.add(filter1)
     pipeline.add(nvvidconv1)
     pipeline.add(nvosd)
+    pipeline.add(sink)
     if is_aarch64():
         pipeline.add(transform)
-    pipeline.add(sink)
 
     print("Linking elements in the Pipeline \n")
     streammux.link(pgie)
-    pgie.link(nvvidconv1)
+    pgie.link(tracker)
+    tracker.link(nvvidconv1)
     nvvidconv1.link(filter1)
     filter1.link(tiler)
     tiler.link(nvvidconv)
