@@ -11,7 +11,7 @@ from common.utils import *
 import pyds
 import configparser
 from common.FPS import GETFPS
-asda
+
 import ctypes
 import numpy as np
 import cv2
