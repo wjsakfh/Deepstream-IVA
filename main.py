@@ -7,7 +7,7 @@ gi.require_version("Gst", "1.0")
 from gi.repository import GObject, Gst
 from common.is_aarch_64 import is_aarch64
 from common.bus_call import bus_call
-from common.utils import *
+from core.utils import *
 import pyds
 import configparser
 from common.FPS import GETFPS
