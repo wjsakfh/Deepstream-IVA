@@ -129,7 +129,8 @@ def create_source_bin(index, uri):
 
 
 def tiler_sink_pad_buffer_probe(pad, info, u_data):
-    pipeline_msg_protocol = {}
+    msg: Dict = dict()
+
     frame_number = 0
     num_rects = 0
     gst_buffer = info.get_buffer()
@@ -141,19 +142,24 @@ def tiler_sink_pad_buffer_probe(pad, info, u_data):
     # Note that pyds.gst_buffer_get_nvds_batch_meta() expects the
     # C address of gst_buffer as input, which is obtained with hash(gst_buffer)
     batch_meta = pyds.gst_buffer_get_nvds_batch_meta(hash(gst_buffer))
+    # print("batch_meta", dir(batch_meta))
     l_frame = batch_meta.frame_meta_list
     # print("l_frame", dir(l_frame))
     # print("l_frame.data", l_frame.data)
     # print("l_frame.next", l_frame.next)
+    frame_list: List = list()
     while l_frame is not None:
-        frame_dict = {}
-        print("l_frame.data1", l_frame.data)
-
         try:
             frame_meta = pyds.NvDsFrameMeta.cast(l_frame.data)
         except StopIteration:
             break
 
+        frame_meta_contents = {
+            "source_id": frame_meta.source_id,
+            "source_height": frame_meta.source_frame_height,
+            "source_width": frame_meta.source_frame_width,
+            "source_time": frame_meta.ntp_timestamp,
+        }
         # print("dir(frame_meta)", dir(frame_meta))
         # print("frame_meta.frame_num", frame_meta.frame_num)
         # print("frame_meta.ntp_timestamp", frame_meta.ntp_timestamp)
@@ -173,11 +179,27 @@ def tiler_sink_pad_buffer_probe(pad, info, u_data):
         'surface_index', 'surface_type']
         """
         l_obj = frame_meta.obj_meta_list
+        obj_list: List = list()
         while l_obj is not None:
             try:
                 obj_meta = pyds.NvDsObjectMeta.cast(l_obj.data)
             except StopIteration:
                 break
+
+            # ---- Stacking object meta data ---- #
+            obj_meta_contents = {
+                "obj_id": obj_meta.object_id,
+                "obj_confid": obj_meta.confidence,
+                "obj_class_id": obj_meta.class_id,
+            }
+            bbox_info_contents = {
+                "height": obj_meta.tracker_bbox_info.org_bbox_coords.height,
+                "left": obj_meta.tracker_bbox_info.org_bbox_coords.left,
+                "top": obj_meta.tracker_bbox_info.org_bbox_coords.top,
+                "width": obj_meta.tracker_bbox_info.org_bbox_coords.width,
+            }
+            obj_meta_contents["tracker_bbox_info"] = bbox_info_contents
+            obj_list.append(obj_meta_contents)
             """
             'base_meta', 'cast', 'class_id', 'classifier_meta_list', 'confidence', 'detector_bbox_info', 'mask_params',
              'misc_obj_info', 'obj_label', 'obj_user_meta_list', 'object_id', 'parent', 'rect_params', 'reserved', 
@@ -217,25 +239,49 @@ def tiler_sink_pad_buffer_probe(pad, info, u_data):
             # print("obj_meta.base_meta.text_params.font_params",obj_meta.text_params.font_params)
             # print("obj_meta.detector_bbox_info.org_bbox_coords", obj_meta.detector_bbox_info.org_bbox_coords)
 
-            print("dir(obj_meta.tracker_bbox_info.org_bbox_coords)", dir(obj_meta.tracker_bbox_info.org_bbox_coords))
-            print("dir(obj_meta.base_meta.batch_meta)", dir(obj_meta.base_meta.batch_meta))
-            print("dir(obj_meta.detector_bbox_info.org_bbox_coords)", dir(obj_meta.detector_bbox_info.org_bbox_coords))
+            # print(
+            #     "dir(obj_meta.tracker_bbox_info.org_bbox_coords)",
+            #     dir(obj_meta.tracker_bbox_info.org_bbox_coords),
+            # )
+            # print(
+            #     "dir(obj_meta.base_meta.batch_meta)", dir(obj_meta.base_meta.batch_meta)
+            # )
+            # print(
+            #     "dir(obj_meta.detector_bbox_info.org_bbox_coords)",
+            #     dir(obj_meta.detector_bbox_info.org_bbox_coords),
+            # )
 
-            print("obj_meta.tracker_bbox_info.org_bbox_coords.height", obj_meta.tracker_bbox_info.org_bbox_coords.height)
-            print("obj_meta.detector_bbox_info.org_bbox_coords.height", obj_meta.detector_bbox_info.org_bbox_coords.height)
-            print("obj_meta.base_meta.batch_meta.max_frames_in_batch", obj_meta.base_meta.batch_meta.max_frames_in_batch)
-            print("obj_meta.base_meta.batch_meta.num_frames_in_batch", obj_meta.base_meta.batch_meta.num_frames_in_batch)
+            # print(
+            #     "obj_meta.tracker_bbox_info.org_bbox_coords.height",
+            #     obj_meta.tracker_bbox_info.org_bbox_coords.height,
+            # )
+            # print(
+            #     "obj_meta.detector_bbox_info.org_bbox_coords.height",
+            #     obj_meta.detector_bbox_info.org_bbox_coords.height,
+            # )
+            # print(
+            #     "obj_meta.base_meta.batch_meta.max_frames_in_batch",
+            #     obj_meta.base_meta.batch_meta.max_frames_in_batch,
+            # )
+            # print(
+            #     "obj_meta.base_meta.batch_meta.num_frames_in_batch",
+            #     obj_meta.base_meta.batch_meta.num_frames_in_batch,
+            # )
 
             try:
                 l_obj = l_obj.next
             except StopIteration:
                 break
+
+        frame_meta_contents["obj_list"] = obj_list
+        frame_list.append(frame_meta_contents)
         try:
             l_frame = l_frame.next
         except StopIteration:
             break
 
-
+    msg["frame_list"] = frame_list
+    print("msg", msg)
     # for frame in l_frame:
     #     print()
 
