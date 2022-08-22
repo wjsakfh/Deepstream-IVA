@@ -92,6 +92,10 @@ def main(args):
     if not pgie:
         sys.stderr.write(" Unable to create pgie \n")
 
+    sgie = Gst.ElementFactory.make("nvinfer", "secondary-inference1")
+    if not sgie:
+        sys.stderr.write(" Unable to create pgie \n")
+
     tracker = Gst.ElementFactory.make("nvtracker", "tracker")
     if not tracker:
         sys.stderr.write(" Unable to create tracker \n")
@@ -152,6 +156,10 @@ def main(args):
             " \n",
         )
         pgie.set_property("batch-size", number_sources)
+
+    sgie.set_property(
+        "config-file-path", "./inference_source/sgie/masknet/infer_nvinfer_config.txt"
+    )
     tiler_rows = int(math.sqrt(number_sources))
     tiler_columns = int(math.ceil((1.0 * number_sources) / tiler_rows))
     tiler.set_property("rows", tiler_rows)
@@ -204,6 +212,7 @@ def main(args):
     print("Adding elements to Pipeline \n")
     pipeline.add(pgie)
     pipeline.add(tracker)
+    pipeline.add(sgie)
     pipeline.add(tiler)
     pipeline.add(nvvidconv)
     pipeline.add(filter1)
@@ -216,7 +225,8 @@ def main(args):
     print("Linking elements in the Pipeline \n")
     streammux.link(pgie)
     pgie.link(tracker)
-    tracker.link(nvvidconv1)
+    tracker.link(sgie)
+    sgie.link(nvvidconv1)
     nvvidconv1.link(filter1)
     filter1.link(tiler)
     tiler.link(nvvidconv)
