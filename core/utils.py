@@ -198,8 +198,49 @@ def tiler_sink_pad_buffer_probe(pad, info, u_data):
                 "top": obj_meta.tracker_bbox_info.org_bbox_coords.top,
                 "width": obj_meta.tracker_bbox_info.org_bbox_coords.width,
             }
+            classifier_info_contents = {}
+            # print(
+            #     "dir(obj_meta.classifier_meta_list)", dir(obj_meta.classifier_meta_list)
+            # )
             obj_meta_contents["tracker_bbox_info"] = bbox_info_contents
             obj_list.append(obj_meta_contents)
+
+            l_classifier = obj_meta.classifier_meta_list
+            while l_classifier is not None:
+                try:
+                    class_meta = pyds.NvDsClassifierMeta.cast(l_classifier.data)
+                except StopIteration:
+                    break
+                print("class_meta.unique_component_id", class_meta.unique_component_id)
+
+
+                l_label_info = class_meta.label_info_list
+                while l_label_info is not None:
+                    try:
+                        label_info_meta = pyds.NvDsLabelInfo.cast(l_label_info.data)
+                    except StopIteration:
+                        break
+
+                    print("label_info_meta.label_id", label_info_meta.label_id)
+                    print("label_info_meta.pResult_label", label_info_meta.pResult_label)
+                    print("label_info_meta.num_classes", label_info_meta.num_classes)
+                    print("label_info_meta.result_prob", label_info_meta.result_prob)
+                    print("label_info_meta.result_label", label_info_meta.result_label)
+                    print("label_info_meta.result_class_id", label_info_meta.result_class_id)
+                    print()
+
+                    try: 
+                        l_label_info = l_label_info.next
+                    except StopIteration:
+                        break
+                print("dir(class_meta.label_info_list)", dir(class_meta.label_info_list))
+                print("class_meta.num_labels", class_meta.num_labels)
+                print("class_meta.unique_component_id", class_meta.unique_component_id)
+
+                try:
+                    l_classifier = l_classifier.next
+                except StopIteration:
+                    break
             """
             'base_meta', 'cast', 'class_id', 'classifier_meta_list', 'confidence', 'detector_bbox_info', 'mask_params',
              'misc_obj_info', 'obj_label', 'obj_user_meta_list', 'object_id', 'parent', 'rect_params', 'reserved', 
@@ -281,7 +322,7 @@ def tiler_sink_pad_buffer_probe(pad, info, u_data):
             break
 
     msg["frame_list"] = frame_list
-    print("msg", msg)
+    # print("msg", msg)
     # for frame in l_frame:
     #     print()
 
