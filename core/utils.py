@@ -187,128 +187,57 @@ def tiler_sink_pad_buffer_probe(pad, info, u_data):
                 break
 
             # ---- Stacking object meta data ---- #
-            obj_meta_contents = {
-                "obj_id": obj_meta.object_id,
-                "obj_confid": obj_meta.confidence,
-                "obj_class_id": obj_meta.class_id,
-            }
-            bbox_info_contents = {
-                "height": obj_meta.tracker_bbox_info.org_bbox_coords.height,
-                "left": obj_meta.tracker_bbox_info.org_bbox_coords.left,
-                "top": obj_meta.tracker_bbox_info.org_bbox_coords.top,
-                "width": obj_meta.tracker_bbox_info.org_bbox_coords.width,
-            }
-            classifier_info_contents = {}
-            # print(
-            #     "dir(obj_meta.classifier_meta_list)", dir(obj_meta.classifier_meta_list)
-            # )
+            obj_meta_contents: Dict = dict()
+            obj_meta_contents["obj_id"] = obj_meta.object_id
+            obj_meta_contents["obj_confid"] =obj_meta.confidence
+            obj_meta_contents["obj_class_id"] = obj_meta.class_id
+            obj_meta_contents["obj_class_label"] = obj_meta.obj_label
+
+            bbox_info_contents: Dict = dict()
+            bbox_info_contents["height"] = obj_meta.tracker_bbox_info.org_bbox_coords.height
+            bbox_info_contents["left"] = obj_meta.tracker_bbox_info.org_bbox_coords.left
+            bbox_info_contents["top"] = obj_meta.tracker_bbox_info.org_bbox_coords.top
+            bbox_info_contents["width"] = obj_meta.tracker_bbox_info.org_bbox_coords.width
+
             obj_meta_contents["tracker_bbox_info"] = bbox_info_contents
-            obj_list.append(obj_meta_contents)
 
             l_classifier = obj_meta.classifier_meta_list
+            classifier_list: List = list()
             while l_classifier is not None:
                 try:
                     class_meta = pyds.NvDsClassifierMeta.cast(l_classifier.data)
                 except StopIteration:
                     break
-                print("class_meta.unique_component_id", class_meta.unique_component_id)
-
+                classifier_meta_contents: Dict = dict()
+                classifier_meta_contents["classifier_id"] = class_meta.unique_component_id
 
                 l_label_info = class_meta.label_info_list
+                label_info_list: List = list()
                 while l_label_info is not None:
                     try:
                         label_info_meta = pyds.NvDsLabelInfo.cast(l_label_info.data)
                     except StopIteration:
                         break
+                    label_info_contents: Dict = dict()
+                    label_info_contents["result_prob"] = label_info_meta.result_prob
+                    label_info_contents["result_label"] = label_info_meta.result_label
+                    label_info_contents["result_class_id"] = label_info_meta.result_class_id
 
-                    print("label_info_meta.label_id", label_info_meta.label_id)
-                    print("label_info_meta.pResult_label", label_info_meta.pResult_label)
-                    print("label_info_meta.num_classes", label_info_meta.num_classes)
-                    print("label_info_meta.result_prob", label_info_meta.result_prob)
-                    print("label_info_meta.result_label", label_info_meta.result_label)
-                    print("label_info_meta.result_class_id", label_info_meta.result_class_id)
-                    print()
-
+                    label_info_list.append(label_info_contents)
                     try: 
                         l_label_info = l_label_info.next
                     except StopIteration:
                         break
-                print("dir(class_meta.label_info_list)", dir(class_meta.label_info_list))
-                print("class_meta.num_labels", class_meta.num_labels)
-                print("class_meta.unique_component_id", class_meta.unique_component_id)
 
+                classifier_meta_contents["label_info_list"] = label_info_list
+                classifier_list.append(classifier_meta_contents)
                 try:
                     l_classifier = l_classifier.next
                 except StopIteration:
                     break
-            """
-            'base_meta', 'cast', 'class_id', 'classifier_meta_list', 'confidence', 'detector_bbox_info', 'mask_params',
-             'misc_obj_info', 'obj_label', 'obj_user_meta_list', 'object_id', 'parent', 'rect_params', 'reserved', 
-             'text_params', 'tracker_bbox_info', 'tracker_confidence', 'unique_component_id'
-            """
-            # print("obj_meta.base_meta", obj_meta.base_meta)
-            # print("obj_meta.cast", obj_meta.cast)
-            # print("obj_meta.class_id", obj_meta.class_id)
-            # print("obj_meta.classifier_meta_list", obj_meta.classifier_meta_list)
-            # print("obj_meta.confidence", obj_meta.confidence)
-            # print("obj_meta.detector_bbox_info", obj_meta.detector_bbox_info)
-            # print("obj_meta.misc_obj_info", obj_meta.misc_obj_info)
-            # print("obj_meta.obj_label", obj_meta.obj_label)
-            # print("obj_meta.obj_user_meta_list", obj_meta.obj_user_meta_list)
-            # print("obj_meta.object_id", obj_meta.object_id)
-            # print("obj_meta.parent", obj_meta.parent)
-            # print("obj_meta.rect_params", obj_meta.rect_params)
-            # print("obj_meta.reserved", obj_meta.reserved)
-            # print("obj_meta.text_params", obj_meta.text_params)
-            # print("obj_meta.tracker_bbox_info", obj_meta.tracker_bbox_info)
-            # print("obj_meta.tracker_confidence", obj_meta.tracker_confidence)
-            # print("obj_meta.unique_component_id", obj_meta.unique_component_id)
 
-            # print("dir(obj_meta.detector_bbox_info)", dir(obj_meta.detector_bbox_info))
-            # print("dir(obj_meta.rect_params)", dir(obj_meta.rect_params))
-            # print("dir(obj_meta.text_params)", dir(obj_meta.text_params))
-            # print("dir( obj_meta.base_meta)", dir(obj_meta.base_meta))
-            # print("dir(obj_meta.tracker_bbox_info)", dir(obj_meta.tracker_bbox_info))
-
-            # print("obj_meta.tracker_bbox_info.org_bbox_coords", obj_meta.tracker_bbox_info.org_bbox_coords)
-            # print("obj_meta.base_meta.batch_meta", obj_meta.base_meta.batch_meta)
-            # print("obj_meta.base_meta.meta_type", obj_meta.base_meta.meta_type)
-            # print("obj_meta.base_meta.text_params.display_text",obj_meta.text_params.display_text)
-            # print("obj_meta.base_meta.text_params.x_offset",obj_meta.text_params.x_offset)
-            # print("obj_meta.base_meta.text_params.y_offset",obj_meta.text_params.y_offset)
-            # print("obj_meta.base_meta.text_params.text_bg_clr",obj_meta.text_params.text_bg_clr)
-            # print("obj_meta.base_meta.text_params.font_params",obj_meta.text_params.font_params)
-            # print("obj_meta.detector_bbox_info.org_bbox_coords", obj_meta.detector_bbox_info.org_bbox_coords)
-
-            # print(
-            #     "dir(obj_meta.tracker_bbox_info.org_bbox_coords)",
-            #     dir(obj_meta.tracker_bbox_info.org_bbox_coords),
-            # )
-            # print(
-            #     "dir(obj_meta.base_meta.batch_meta)", dir(obj_meta.base_meta.batch_meta)
-            # )
-            # print(
-            #     "dir(obj_meta.detector_bbox_info.org_bbox_coords)",
-            #     dir(obj_meta.detector_bbox_info.org_bbox_coords),
-            # )
-
-            # print(
-            #     "obj_meta.tracker_bbox_info.org_bbox_coords.height",
-            #     obj_meta.tracker_bbox_info.org_bbox_coords.height,
-            # )
-            # print(
-            #     "obj_meta.detector_bbox_info.org_bbox_coords.height",
-            #     obj_meta.detector_bbox_info.org_bbox_coords.height,
-            # )
-            # print(
-            #     "obj_meta.base_meta.batch_meta.max_frames_in_batch",
-            #     obj_meta.base_meta.batch_meta.max_frames_in_batch,
-            # )
-            # print(
-            #     "obj_meta.base_meta.batch_meta.num_frames_in_batch",
-            #     obj_meta.base_meta.batch_meta.num_frames_in_batch,
-            # )
-
+            obj_meta_contents["classifier_list"] = classifier_list
+            obj_list.append(obj_meta_contents)
             try:
                 l_obj = l_obj.next
             except StopIteration:
@@ -322,96 +251,7 @@ def tiler_sink_pad_buffer_probe(pad, info, u_data):
             break
 
     msg["frame_list"] = frame_list
-    # print("msg", msg)
-    # for frame in l_frame:
-    #     print()
-
-    # while l_frame is not None:
-    #     try:
-    #         # Note that l_frame.data needs a cast to pyds.NvDsFrameMeta
-    #         # The casting is done by pyds.NvDsFrameMeta.cast()
-    #         # The casting also keeps ownership of the underlying memory
-    #         # in the C code, so the Python garbage collector will leave
-    #         # it alone.
-    #         frame_meta = pyds.NvDsFrameMeta.cast(l_frame.data)
-    #     except StopIteration:
-    #         break
-
-    #     frame_number = frame_meta.frame_num
-    #     l_obj = frame_meta.obj_meta_list
-    #     num_rects = frame_meta.num_obj_meta
-    #     is_first_obj = True
-    #     save_image = False
-    #     obj_counter = {
-    #         PGIE_CLASS_ID_PERSON: 0,
-    #     }
-    #     while l_obj is not None:
-    #         try:
-    #             # Casting l_obj.data to pyds.NvDsObjectMeta
-    #             obj_meta = pyds.NvDsObjectMeta.cast(l_obj.data)
-    #         except StopIteration:
-    #             break
-
-    #         # print("obj_meta.class_id", obj_meta.class_id)
-    # print("obj_meta.object_id", obj_meta.object_id)
-    #         # print("obj_meta.confidence", obj_meta.confidence)
-    #         # print("obj_meta.tracker_confidence", obj_meta.tracker_confidence)
-    #         # print("obj_meta.rect_params", obj_meta.rect_params)
-    #         # print("obj_meta.detector_bbox_info", obj_meta.detector_bbox_info)
-    #         # print("obj_meta.classifier_meta_list", obj_meta.classifier_meta_list)
-
-    #         # obj_counter[obj_meta.class_id] += 1
-    #         # Periodically check for objects with borderline confidence value that may be false positive detections.
-    #         # If such detections are found, annotate the frame with bboxes and confidence value.
-    #         # Save the annotated frame to file.
-
-    #         # if saved_count["stream_{}".format(frame_meta.pad_index)] % 30 == 0 and (
-    #         #     MIN_CONFIDENCE < obj_meta.confidence
-    #         # ):
-    #         #     if is_first_obj:
-    #         #         is_first_obj = False
-    #         #         # Getting Image data using nvbufsurface
-    #         #         # the input should be address of buffer and batch_id
-    #         #         n_frame = pyds.get_nvds_buf_surface(
-    #         #             hash(gst_buffer), frame_meta.batch_id
-    #         #         )
-    #         #         n_frame = draw_bounding_boxes(
-    #         #             n_frame, obj_meta, obj_meta.confidence
-    #         #         )
-    #         #         # convert python array into numpy array format in the copy mode.
-    #         #         frame_copy = np.array(n_frame, copy=True, order="C")
-    #         #         # convert the array into cv2 default color format
-    #         #         frame_copy = cv2.cvtColor(frame_copy, cv2.COLOR_RGBA2BGRA)
-
-    #         #     save_image = True
-
-    #         try:
-    #             l_obj = l_obj.next
-    #         except StopIteration:
-    #             break
-
-    #     # print(
-    #     #     "Frame Number=",
-    #     #     frame_number,
-    #     #     "Number of Objects=",
-    #     #     num_rects,
-    #     #     "Person_count=",
-    #     #     obj_counter[PGIE_CLASS_ID_PERSON],
-    #     # )
-    #     # Get frame rate through this probe
-    #     # fps_streams["stream{0}".format(frame_meta.pad_index)].get_fps()
-    #     # if save_image:
-    #     #     img_path = "{}/stream_{}/frame_{}.jpg".format(
-    #     #         inference_parameter.folder_name, frame_meta.pad_index, frame_number
-    #     #     )
-    #     #     cv2.imwrite(img_path, frame_copy)
-    #     # saved_count["stream_{}".format(frame_meta.pad_index)] += 1
-
-    #     try:
-    #         l_frame = l_frame.next
-    #     except StopIteration:
-    #         break
-
+    print("msg", msg)
     return Gst.PadProbeReturn.OK
 
 
