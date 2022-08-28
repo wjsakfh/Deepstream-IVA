@@ -10,6 +10,8 @@ import cv2
 
 from typing import Dict, List
 
+from core.manageDB import retrieve_pgie_obj, PgieObj
+
 fps_streams = {}
 frame_count = {}
 saved_count = {}
@@ -128,12 +130,9 @@ def create_source_bin(index, uri):
     return nbin
 
 
-def tiler_sink_pad_buffer_probe(pad, info, u_data):
-    msg: Dict = dict()
+def parse_buffer2msg(buffer, msg):
 
-    frame_number = 0
-    num_rects = 0
-    gst_buffer = info.get_buffer()
+    gst_buffer = buffer
     if not gst_buffer:
         print("Unable to get GstBuffer ")
         return
@@ -142,11 +141,8 @@ def tiler_sink_pad_buffer_probe(pad, info, u_data):
     # Note that pyds.gst_buffer_get_nvds_batch_meta() expects the
     # C address of gst_buffer as input, which is obtained with hash(gst_buffer)
     batch_meta = pyds.gst_buffer_get_nvds_batch_meta(hash(gst_buffer))
-    # print("batch_meta", dir(batch_meta))
     l_frame = batch_meta.frame_meta_list
-    # print("l_frame", dir(l_frame))
-    # print("l_frame.data", l_frame.data)
-    # print("l_frame.next", l_frame.next)
+
     frame_list: List = list()
     while l_frame is not None:
         try:
@@ -160,24 +156,7 @@ def tiler_sink_pad_buffer_probe(pad, info, u_data):
             "source_width": frame_meta.source_frame_width,
             "source_time": frame_meta.ntp_timestamp,
         }
-        # print("dir(frame_meta)", dir(frame_meta))
-        # print("frame_meta.frame_num", frame_meta.frame_num)
-        # print("frame_meta.ntp_timestamp", frame_meta.ntp_timestamp)
-        # print("frame_meta.source_frame_height", frame_meta.source_frame_height)
-        # print("frame_meta.source_frame_width", frame_meta.source_frame_width)
-        # print("frame_meta.source_id", frame_meta.source_id)
-        # print("frame_meta.surface_index", frame_meta.surface_index)
-        # print("frame_meta.surface_type", frame_meta.surface_type)
-        # print("frame_meta.frame_user_meta_list",frame_meta.frame_user_meta_list)
-        # print("frame_meta.misc_frame_info",frame_meta.misc_frame_info)
-        # print("frame_meta.num_obj_meta",frame_meta.num_obj_meta)
-        # print("frame_meta.obj_meta_list",frame_meta.obj_meta_list)
-        # print("frame_meta.reserved",frame_meta.reserved)
-        """
-        frame_user_meta_list', 'misc_frame_info', 'ntp_timestamp', 'num_obj_meta', 'num_surfaces_per_frame', 
-        'obj_meta_list', 'pad_index', 'reserved', 'source_frame_height', 'source_frame_width', 'source_id', 
-        'surface_index', 'surface_type']
-        """
+
         l_obj = frame_meta.obj_meta_list
         obj_list: List = list()
         while l_obj is not None:
@@ -189,15 +168,19 @@ def tiler_sink_pad_buffer_probe(pad, info, u_data):
             # ---- Stacking object meta data ---- #
             obj_meta_contents: Dict = dict()
             obj_meta_contents["obj_id"] = obj_meta.object_id
-            obj_meta_contents["obj_confid"] =obj_meta.confidence
+            obj_meta_contents["obj_confid"] = obj_meta.confidence
             obj_meta_contents["obj_class_id"] = obj_meta.class_id
             obj_meta_contents["obj_class_label"] = obj_meta.obj_label
 
             bbox_info_contents: Dict = dict()
-            bbox_info_contents["height"] = obj_meta.tracker_bbox_info.org_bbox_coords.height
+            bbox_info_contents[
+                "height"
+            ] = obj_meta.tracker_bbox_info.org_bbox_coords.height
             bbox_info_contents["left"] = obj_meta.tracker_bbox_info.org_bbox_coords.left
             bbox_info_contents["top"] = obj_meta.tracker_bbox_info.org_bbox_coords.top
-            bbox_info_contents["width"] = obj_meta.tracker_bbox_info.org_bbox_coords.width
+            bbox_info_contents[
+                "width"
+            ] = obj_meta.tracker_bbox_info.org_bbox_coords.width
 
             obj_meta_contents["tracker_bbox_info"] = bbox_info_contents
 
@@ -209,7 +192,9 @@ def tiler_sink_pad_buffer_probe(pad, info, u_data):
                 except StopIteration:
                     break
                 classifier_meta_contents: Dict = dict()
-                classifier_meta_contents["classifier_id"] = class_meta.unique_component_id
+                classifier_meta_contents[
+                    "classifier_id"
+                ] = class_meta.unique_component_id
 
                 l_label_info = class_meta.label_info_list
                 label_info_list: List = list()
@@ -221,10 +206,12 @@ def tiler_sink_pad_buffer_probe(pad, info, u_data):
                     label_info_contents: Dict = dict()
                     label_info_contents["result_prob"] = label_info_meta.result_prob
                     label_info_contents["result_label"] = label_info_meta.result_label
-                    label_info_contents["result_class_id"] = label_info_meta.result_class_id
+                    label_info_contents[
+                        "result_class_id"
+                    ] = label_info_meta.result_class_id
 
                     label_info_list.append(label_info_contents)
-                    try: 
+                    try:
                         l_label_info = l_label_info.next
                     except StopIteration:
                         break
@@ -251,7 +238,23 @@ def tiler_sink_pad_buffer_probe(pad, info, u_data):
             break
 
     msg["frame_list"] = frame_list
-    print("msg", msg)
+
+    return msg
+
+
+def tiler_sink_pad_buffer_probe(pad, info, u_data):
+    msg: Dict = dict()
+    gst_buffer = info.get_buffer()
+
+    parsed_msg = parse_buffer2msg(gst_buffer, msg)
+    obj_list = parsed_msg["obj_list"]
+
+    for obj_info in obj_list:
+        PgieObj(obj_info)
+        # obj_result = retrieve_pgie_obj(obj_list[i_obj])
+        
+
+    # print("msg", msg)
     return Gst.PadProbeReturn.OK
 
 
