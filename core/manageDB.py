@@ -7,60 +7,9 @@ from gi.repository import GObject, Gst
 from time import monotonic
 from typing import List, Dict
 from core.utils import parse_buffer2msg
+from dataclasses import dataclass
 
-
-def retrieve_pgie_obj(msg):
-    # ---- retrieve pgie results ---- #
-    class_label = msg["objects"][i]["type_id"]
-    track_id = int(msg["objects"][i]["track_id"].split("-")[-1], 16)
-    H, W = msg["extra"]["height"], msg["extra"]["width"]
-    xmin = int(msg["objects"][i]["bbox"]["x"] * W)
-    ymin = int(msg["objects"][i]["bbox"]["y"] * H)
-    xmax = xmin + int(msg["objects"][i]["bbox"]["width"] * W)
-    ymax = ymin + int(msg["objects"][i]["bbox"]["height"] * H)
-    pos = [xmin, ymin, xmax, ymax]
-
-    # ---- c_pos is a point of the lowest and middle point of bbox ---- #
-    cx = int((xmin + xmax) / 2)
-    cy = ymin + (ymax - ymin)
-    c_pos = [cx, cy]
-
-    pgie_results = [class_label, track_id, pos, c_pos]
-
-    # ---- retrieve sgie results ---- #
-    sgie_labels_info = [
-        sgie_label_info
-        for sgie_label_info in ev_sgie_class_on_pgie
-        if sgie_label_info[0] == class_label
-    ]
-    sgie_results = [list() for i in range(len(sgie_labels_info))]
-    if len(sgie_labels_info) != 0:
-        for label_idx in range(len(sgie_labels_info)):
-            for class_idx in range(len(msg["objects"][i]["classifier"]["label_info"])):
-                if sgie_labels_info[label_idx][0] == class_label:
-                    if (
-                        sgie_labels_info[label_idx][1]
-                        == msg["objects"][i]["classifier"]["label_info"][class_idx][
-                            "class_type"
-                        ]
-                    ):
-                        sgie_result = (
-                            msg["objects"][i]["classifier"]["label_info"][class_idx][
-                                "result_label"
-                            ]
-                            == sgie_labels_info[label_idx][2]
-                        )
-                        sgie_results[label_idx] = sgie_result
-                    else:
-                        pass
-                else:
-                    pass
-    else:
-        pass
-
-    return pgie_results, sgie_results
-
-
+@dataclass
 class PgieObj:
     def __init__(self, obj_info):
         self.class_id: int = obj_info["obj_class_id"]
@@ -98,9 +47,13 @@ class MsgManager:
                 pgie_obj = PgieObj(obj_info)
                 self._update_obj(pgie_obj)
         print("self.obj_id_list", self.obj_id_list)
+        # TODO obj등록이 끝난 list는 이벤트 발생알고리즘으로 전달
+        # TODO algorithms.line_crossing(self.obj_list)
         return Gst.PadProbeReturn.OK
 
     def _update_obj(self, pgie_obj):
+        # pgie_obj: 현재 등록하려는 obj
+        # obj: list에 이미 등록된 obj
         self._register_obj(pgie_obj)
         for obj in self.obj_list:
             self._remove_obj(obj)
@@ -114,12 +67,15 @@ class MsgManager:
         del pgie_obj # 등록을 마치고 메모리에서 삭제한다.
 
     def _remove_obj(self, obj):
+        # 일정시간이 지난 obj는 list에서 지운다.
         if obj.last_time + self.timeout < self.now:
             self.obj_list.remove(obj)
         else:
             pass
 
     def _register_obj(self, pgie_obj):
+        # list에 아무 obj가 등록되지 않았거나
+        # 새로운 id의 obj가 나타났을 때 등록을 한다.
         if len(self.obj_list) == 0:
             self.obj_list.append(pgie_obj)
         elif pgie_obj.obj_id not in self.obj_id_list:
