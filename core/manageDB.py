@@ -65,58 +65,64 @@ class PgieObj:
     def __init__(self, obj_info):
         self.class_id: int = obj_info["obj_class_id"]
         self.obj_id: int = obj_info["obj_id"]
-        self.pos: List = obj_info["tracker_bbox_info"]
-        self.traj: List = obj_info["obj_id"]
-        self.init_time: int = monotonic()
-        self.last_time: int = monotonic()
+        self.pos: List[int] = obj_info["tracker_bbox_info"]
+        self.traj: List[List[int]] = [obj_info["tracker_bbox_info"]] # traj: trajectory
+        self.init_time: float = monotonic()
+        self.last_time: float = monotonic()
 
 
-class PgieObjList:
+class MsgManager:
     # TODO 단일 obj를 관리하는 방법 고안 (현재는 obj list를 관리하는 방법임.): register, update, remove
-    def __init__(self, obj_info_list):
-        self.obj_info_list = obj_info_list
+    def __init__(self):
+        # self.obj_info_list = obj_info_list
+        self.strm_list: List = list()
         self.obj_list: List = list()
+        self.timeout: float = 3.0
         # 정보 Extract
         # 리스트 업데이트
 
     # TODO tiler_sink_pad_buffer_probe를 PgieObjList에 def로 넣는다.
-    def tiler_sink_pad_buffer_probe(pad, info, u_data):
+    # TODO async로 obj를 등록할 수 있다면 좋을 듯
+    # TODO async로 alarm generator가 processing되어야 함
+    def tiler_sink_pad_buffer_probe(self, pad, info, u_data):
+        # msg manager
         msg: Dict = dict()
         gst_buffer = info.get_buffer()
-
         parsed_msg = parse_buffer2msg(gst_buffer, msg)
-        # print("parsed_msg", parsed_msg)
+        self.obj_id_list = [obj.obj_id for obj in self.obj_list]
+        self.now = monotonic()
         for frame_info in parsed_msg["frame_list"]:
             for obj_info in frame_info["obj_list"]:
-                print(PgieObjList(obj_info))
-
-        # obj_info_list = parsed_msg["obj_list"]
-        # for obj_info in obj_info_list:
-        #     obj_list = PgieObjList(obj_info_list).update()
-
-        # obj_result = retrieve_pgie_obj(obj_list[i_obj])
-
-        # print("msg", msg)
+                # pgie_obj생성
+                # self.obj_list에 업데이트.
+                pgie_obj = PgieObj(obj_info)
+                self._update_obj(pgie_obj)
+        print("self.obj_id_list", self.obj_id_list)
         return Gst.PadProbeReturn.OK
 
-    def update(self):
+    def _update_obj(self, pgie_obj):
+        self._register_obj(pgie_obj)
+        for obj in self.obj_list:
+            self._remove_obj(obj)
+            if obj.obj_id == pgie_obj.obj_id:
+                obj.last_time = pgie_obj.last_time
+                obj.pos = pgie_obj.pos
+                obj.traj.append(pgie_obj.pos)
+            else:
+                pass
 
-        pass
+        del pgie_obj # 등록을 마치고 메모리에서 삭제한다.
 
-    def _extract_obj_info(self):
-        for obj_info in self.obj_info_list:
-            # obj 데이터클래스 초기화
-            # obj list에 없으면 초기 등록
-            # 있으면 업데이트
-            # 시간 지나면 제거
-            obj = PgieObj(obj_info)
-            self._register(obj)
+    def _remove_obj(self, obj):
+        if obj.last_time + self.timeout < self.now:
+            self.obj_list.remove(obj)
+        else:
+            pass
 
-    def _remove(self):
-        pass
-
-    def _register(self, obj):
+    def _register_obj(self, pgie_obj):
         if len(self.obj_list) == 0:
-            self.obj_list.append(obj)
+            self.obj_list.append(pgie_obj)
+        elif pgie_obj.obj_id not in self.obj_id_list:
+            self.obj_list.append(pgie_obj)
         else:
             pass

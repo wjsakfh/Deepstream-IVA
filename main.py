@@ -18,7 +18,7 @@ import cv2
 from os import path
 import os
 import math
-from core.manageDB import PgieObjList
+from core.manageDB import MsgManager
 
 
 def main(args):
@@ -245,12 +245,14 @@ def main(args):
     bus.connect("message", bus_call, loop)
 
     tiler_sink_pad = tiler.get_static_pad("sink")
+    msg_manager = MsgManager()
     if not tiler_sink_pad:
         sys.stderr.write(" Unable to get src pad \n")
     else:
         tiler_sink_pad.add_probe(
-            Gst.PadProbeType.BUFFER, PgieObjList.tiler_sink_pad_buffer_probe, 0
+            Gst.PadProbeType.BUFFER, msg_manager.tiler_sink_pad_buffer_probe, 0
         )
+
 
     # List the sources
     print("Now playing...")
