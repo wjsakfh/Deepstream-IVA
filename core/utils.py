@@ -10,7 +10,7 @@ import cv2
 
 from typing import Dict, List
 
-from core.manageDB import retrieve_pgie_obj, PgieObj
+# from core.manageDB import retrieve_pgie_obj, PgieObjList
 
 fps_streams = {}
 frame_count = {}
@@ -241,21 +241,6 @@ def parse_buffer2msg(buffer, msg):
 
     return msg
 
-
-def tiler_sink_pad_buffer_probe(pad, info, u_data):
-    msg: Dict = dict()
-    gst_buffer = info.get_buffer()
-
-    parsed_msg = parse_buffer2msg(gst_buffer, msg)
-    obj_list = parsed_msg["obj_list"]
-
-    for obj_info in obj_list:
-        PgieObj(obj_info)
-        # obj_result = retrieve_pgie_obj(obj_list[i_obj])
-        
-
-    # print("msg", msg)
-    return Gst.PadProbeReturn.OK
 
 
 def draw_bounding_boxes(image, obj_meta, confidence):

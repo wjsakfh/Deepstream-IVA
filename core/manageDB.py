@@ -1,9 +1,15 @@
+import sys
+import gi
+
+gi.require_version("Gst", "1.0")
+from gi.repository import GObject, Gst
+
 from time import monotonic
 from typing import List, Dict
+from core.utils import parse_buffer2msg
 
 
 def retrieve_pgie_obj(msg):
-
     # ---- retrieve pgie results ---- #
     class_label = msg["objects"][i]["type_id"]
     track_id = int(msg["objects"][i]["track_id"].split("-")[-1], 16)
@@ -56,23 +62,61 @@ def retrieve_pgie_obj(msg):
 
 
 class PgieObj:
-    # TODO 단일 obj를 관리하는 방법 고안 (현재는 obj list를 관리하는 방법임.): register, update, remove
     def __init__(self, obj_info):
-        self.obj_info = obj_info
-
-    def _extract_obj_info(self):
-        self.class_id: int = self.obj_info["obj_class_id"]
-        self.obj_id: int = self.obj_info["obj_id"]
-        self.pos: List = self.obj_info["tracker_bbox_info"]
-        self.traj: List = self.obj_info["obj_id"]
+        self.class_id: int = obj_info["obj_class_id"]
+        self.obj_id: int = obj_info["obj_id"]
+        self.pos: List = obj_info["tracker_bbox_info"]
+        self.traj: List = obj_info["obj_id"]
         self.init_time: int = monotonic()
         self.last_time: int = monotonic()
 
-    def remove(self):
-        pass
 
-    def register(self):
-        pass
+class PgieObjList:
+    # TODO 단일 obj를 관리하는 방법 고안 (현재는 obj list를 관리하는 방법임.): register, update, remove
+    def __init__(self, obj_info_list):
+        self.obj_info_list = obj_info_list
+        self.obj_list: List = list()
+        # 정보 Extract
+        # 리스트 업데이트
+
+    # TODO tiler_sink_pad_buffer_probe를 PgieObjList에 def로 넣는다.
+    def tiler_sink_pad_buffer_probe(pad, info, u_data):
+        msg: Dict = dict()
+        gst_buffer = info.get_buffer()
+
+        parsed_msg = parse_buffer2msg(gst_buffer, msg)
+        # print("parsed_msg", parsed_msg)
+        for frame_info in parsed_msg["frame_list"]:
+            for obj_info in frame_info["obj_list"]:
+                print(PgieObjList(obj_info))
+
+        # obj_info_list = parsed_msg["obj_list"]
+        # for obj_info in obj_info_list:
+        #     obj_list = PgieObjList(obj_info_list).update()
+
+        # obj_result = retrieve_pgie_obj(obj_list[i_obj])
+
+        # print("msg", msg)
+        return Gst.PadProbeReturn.OK
 
     def update(self):
+
         pass
+
+    def _extract_obj_info(self):
+        for obj_info in self.obj_info_list:
+            # obj 데이터클래스 초기화
+            # obj list에 없으면 초기 등록
+            # 있으면 업데이트
+            # 시간 지나면 제거
+            obj = PgieObj(obj_info)
+            self._register(obj)
+
+    def _remove(self):
+        pass
+
+    def _register(self, obj):
+        if len(self.obj_list) == 0:
+            self.obj_list.append(obj)
+        else:
+            pass
