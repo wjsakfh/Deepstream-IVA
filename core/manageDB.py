@@ -9,15 +9,12 @@ from typing import List, Dict
 from core.utils import parse_buffer2msg
 from dataclasses import dataclass
 
-@dataclass
-class PgieObj:
-    def __init__(self, obj_info):
-        self.class_id: int = obj_info["obj_class_id"]
-        self.obj_id: int = obj_info["obj_id"]
-        self.pos: List[int] = obj_info["tracker_bbox_info"]
-        self.traj: List[List[int]] = [obj_info["tracker_bbox_info"]] # traj: trajectory
-        self.init_time: float = monotonic()
-        self.last_time: float = monotonic()
+# from algorithms import point_polygon_test
+import numpy as np
+from dto import PgieObj
+
+
+POLYGON = [[0, 0], [0, 1080], [960, 1080], [960, 0]]
 
 
 class MsgManager:
@@ -46,9 +43,16 @@ class MsgManager:
                 # self.obj_list에 업데이트.
                 pgie_obj = PgieObj(obj_info)
                 self._update_obj(pgie_obj)
-        print("self.obj_id_list", self.obj_id_list)
+
+        print(
+            "self.obj_list[0].intrusion_flag_list", self.obj_list[0].intrusion_flag_list
+        )
         # TODO obj등록이 끝난 list는 이벤트 발생알고리즘으로 전달
         # TODO algorithms.line_crossing(self.obj_list)
+        # point polygon test 진행하고 거기서 include가 되면
+        # object의 intrusion 속성을 업데이트
+        self.obj_list
+
         return Gst.PadProbeReturn.OK
 
     def _update_obj(self, pgie_obj):
@@ -61,10 +65,12 @@ class MsgManager:
                 obj.last_time = pgie_obj.last_time
                 obj.pos = pgie_obj.pos
                 obj.traj.append(pgie_obj.pos)
+                obj.update_intrusion_flag(POLYGON)
+
             else:
                 pass
 
-        del pgie_obj # 등록을 마치고 메모리에서 삭제한다.
+        del pgie_obj  # 등록을 마치고 메모리에서 삭제한다.
 
     def _remove_obj(self, obj):
         # 일정시간이 지난 obj는 list에서 지운다.
@@ -76,9 +82,5 @@ class MsgManager:
     def _register_obj(self, pgie_obj):
         # list에 아무 obj가 등록되지 않았거나
         # 새로운 id의 obj가 나타났을 때 등록을 한다.
-        if len(self.obj_list) == 0:
+        if pgie_obj.obj_id not in self.obj_id_list:
             self.obj_list.append(pgie_obj)
-        elif pgie_obj.obj_id not in self.obj_id_list:
-            self.obj_list.append(pgie_obj)
-        else:
-            pass
