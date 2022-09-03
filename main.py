@@ -249,10 +249,11 @@ def main(args):
     if not tiler_sink_pad:
         sys.stderr.write(" Unable to get src pad \n")
     else:
+        # TODO 이 부분을 어떻게 분리시킬 수 있을지 생각해보자
+        # TODO add_probe로부터 나오는 결과를 나는 쓰고 싶다. main.py에서.
         tiler_sink_pad.add_probe(
             Gst.PadProbeType.BUFFER, msg_manager.tiler_sink_pad_buffer_probe, 0
         )
-
 
     # List the sources
     print("Now playing...")

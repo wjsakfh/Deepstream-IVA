@@ -1,6 +1,8 @@
 import sys
 import gi
 
+from core.generator import IntrusionAlarmGenerator
+
 gi.require_version("Gst", "1.0")
 from gi.repository import GObject, Gst
 
@@ -13,12 +15,13 @@ from dataclasses import dataclass
 import numpy as np
 from dto import PgieObj
 
-
+## interface로 빼두어야 함.
 POLYGON = [[0, 0], [0, 1080], [960, 1080], [960, 0]]
 
-
+# AlarmGenerator를 담고 있기엔 이름의 범위가 좁음
+# MsgManager가 들고있는 최종 Result는 self.obj_list 여야함.
+# 이를 바깥 쪽에서 쓸 수 있으면 좋을 것 같음.
 class MsgManager:
-    # TODO 단일 obj를 관리하는 방법 고안 (현재는 obj list를 관리하는 방법임.): register, update, remove
     def __init__(self):
         # self.obj_info_list = obj_info_list
         self.strm_list: List = list()
@@ -27,8 +30,6 @@ class MsgManager:
         # 정보 Extract
         # 리스트 업데이트
 
-    # TODO tiler_sink_pad_buffer_probe를 PgieObjList에 def로 넣는다.
-    # TODO async로 obj를 등록할 수 있다면 좋을 듯
     # TODO async로 alarm generator가 processing되어야 함
     def tiler_sink_pad_buffer_probe(self, pad, info, u_data):
         # msg manager
