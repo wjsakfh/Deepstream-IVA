@@ -51,7 +51,9 @@ class MsgManager:
         # TODO algorithms.line_crossing(self.obj_list)
         # point polygon test 진행하고 거기서 include가 되면
         # object의 intrusion 속성을 업데이트
-        self.obj_list
+        # intrusion flag가 어느정도 이상인 경우 intrusion event를 발생시킨다.
+        intrusion_alarm_gen = IntrusionAlarmGenerator(self.obj_list)
+        intrusion_alarm_gen.run()
 
         return Gst.PadProbeReturn.OK
 
