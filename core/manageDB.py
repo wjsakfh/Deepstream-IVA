@@ -31,6 +31,9 @@ class MsgManager:
         # 리스트 업데이트
 
     # TODO async로 alarm generator가 processing되어야 함
+    # 나중에는 pgie object에 대한 msg를 msg broker를 통해
+    # Event processing 모듈로 전달하고 거기서 모든 것이 처리되도록 해야함.
+    # 그래야지 deepstream과 alarm generator를 분리할 수 있을 것임.
     def tiler_sink_pad_buffer_probe(self, pad, info, u_data):
         # msg manager
         msg: Dict = dict()
@@ -45,9 +48,9 @@ class MsgManager:
                 pgie_obj = PgieObj(obj_info)
                 self._update_obj(pgie_obj)
 
-        print(
-            "self.obj_list[0].intrusion_flag_list", self.obj_list[0].intrusion_flag_list
-        )
+        # print(
+        #     "self.obj_list[0].intrusion_flag_list", self.obj_list[0].intrusion_flag_list
+        # )
         # TODO obj등록이 끝난 list는 이벤트 발생알고리즘으로 전달
         # TODO algorithms.line_crossing(self.obj_list)
         # point polygon test 진행하고 거기서 include가 되면
