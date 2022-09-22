@@ -130,6 +130,7 @@ def create_source_bin(index, uri):
     return nbin
 
 
+# TODO osnet user meta에 접근하여 feature data parsing필요.
 def parse_buffer2msg(buffer, msg):
     gst_buffer = buffer
     if not gst_buffer:
@@ -161,7 +162,7 @@ def parse_buffer2msg(buffer, msg):
         # Getting Image data using nvbufsurface
         # the input should be address of buffer and batch_id
         n_frame = pyds.get_nvds_buf_surface(hash(gst_buffer), frame_meta.batch_id)
-        
+
         obj_list: List = list()
         while l_obj is not None:
             try:
@@ -244,7 +245,6 @@ def parse_buffer2msg(buffer, msg):
     msg["frame_list"] = frame_list
 
     return msg, n_frame
-
 
 
 def draw_bounding_boxes(image, obj_meta, confidence):

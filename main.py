@@ -20,7 +20,8 @@ import os
 import math
 from core.manageDB import MsgManager
 
-
+# TODO osnet 파이프라인 구성 돌아가는 지 확인.
+# TODO osnet과 classifier정보 저장할 수 있게 바꾸기
 def main(args):
     # Check input arguments
     if len(args) < 2:
@@ -95,7 +96,11 @@ def main(args):
 
     sgie = Gst.ElementFactory.make("nvinfer", "secondary-inference1")
     if not sgie:
-        sys.stderr.write(" Unable to create pgie \n")
+        sys.stderr.write(" Unable to create sgie \n")
+
+    reid = Gst.ElementFactory.make("nvinfer", "secondary-reid")
+    if not reid:
+        sys.stderr.write(" Unable to create reid \n")
 
     tracker = Gst.ElementFactory.make("nvtracker", "tracker")
     if not tracker:
@@ -161,6 +166,9 @@ def main(args):
     sgie.set_property(
         "config-file-path", "./inference_source/sgie/masknet/infer_nvinfer_config.txt"
     )
+
+    reid.set_property("config-file-path", "inference_source/re-id/osnet.txt")
+
     tiler_rows = int(math.sqrt(number_sources))
     tiler_columns = int(math.ceil((1.0 * number_sources) / tiler_rows))
     tiler.set_property("rows", tiler_rows)
@@ -214,6 +222,7 @@ def main(args):
     pipeline.add(pgie)
     pipeline.add(tracker)
     pipeline.add(sgie)
+    pipeline.add(reid)
     pipeline.add(tiler)
     pipeline.add(nvvidconv)
     pipeline.add(filter1)
@@ -227,7 +236,8 @@ def main(args):
     streammux.link(pgie)
     pgie.link(tracker)
     tracker.link(sgie)
-    sgie.link(nvvidconv1)
+    sgie.link(reid)
+    reid.link(nvvidconv1)
     nvvidconv1.link(filter1)
     filter1.link(tiler)
     tiler.link(nvvidconv)
@@ -246,6 +256,7 @@ def main(args):
 
     tiler_sink_pad = tiler.get_static_pad("sink")
     msg_manager = MsgManager()
+
     if not tiler_sink_pad:
         sys.stderr.write(" Unable to get src pad \n")
     else:

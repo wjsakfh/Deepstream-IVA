@@ -40,6 +40,7 @@ class MsgManager:
         parsed_msg, frame = parse_buffer2msg(gst_buffer, msg)
         self.obj_id_list = [obj.obj_id for obj in self.obj_list]
         self.now = monotonic()
+        print(parsed_msg)
         for frame_info in parsed_msg["frame_list"]:
             for obj_info in frame_info["obj_list"]:
                 # pgie_obj생성
