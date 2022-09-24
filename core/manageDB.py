@@ -38,9 +38,8 @@ class MsgManager:
         msg: Dict = dict()
         gst_buffer = info.get_buffer()
         parsed_msg, frame = parse_buffer2msg(gst_buffer, msg)
-        self.obj_id_list = [obj.obj_id for obj in self.obj_list]
         self.now = monotonic()
-        print(parsed_msg)
+        # print(parsed_msg)
         for frame_info in parsed_msg["frame_list"]:
             for obj_info in frame_info["obj_list"]:
                 # pgie_obj생성
@@ -62,13 +61,11 @@ class MsgManager:
             if obj.obj_id == pgie_obj.obj_id:
                 obj.last_time = pgie_obj.last_time
                 obj.pos = pgie_obj.pos
+                obj.bbox = pgie_obj.bbox
                 obj.traj.append(pgie_obj.pos)
 
                 obj.update_intrusion_flag(POLYGON)
                 obj.update_alarm_state()
-
-            else:
-                pass
 
         del pgie_obj  # 등록을 마치고 메모리에서 삭제한다.
 
@@ -76,11 +73,10 @@ class MsgManager:
         # 일정시간이 지난 obj는 list에서 지운다.
         if obj.last_time + self.timeout < self.now:
             self.obj_list.remove(obj)
-        else:
-            pass
 
     def _register_obj(self, pgie_obj):
         # list에 아무 obj가 등록되지 않았거나
         # 새로운 id의 obj가 나타났을 때 등록을 한다.
-        if pgie_obj.obj_id not in self.obj_id_list:
+        obj_id_list = [obj.obj_id for obj in self.obj_list]
+        if pgie_obj.obj_id not in obj_id_list:
             self.obj_list.append(pgie_obj)

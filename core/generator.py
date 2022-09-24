@@ -25,8 +25,6 @@ class IntrusionAlarmGenerator(BaseAlarmGenerator):
         for obj in self.obj_list:
             if obj.alarm_check_list[0] == False and obj.alarm_check_list[1] == True:
                 self.save_alarm_img(IMG_DIR, self.frame, obj.bbox)
-            else:
-                pass
 
     def save_alarm_img(self, img_dir, img, bbox_info):
         img_cvt = cv2.cvtColor(img, cv2.COLOR_RGBA2BGRA)

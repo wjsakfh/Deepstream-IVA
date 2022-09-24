@@ -129,6 +129,79 @@ def create_source_bin(index, uri):
         return None
     return nbin
 
+def parse_classifier_meta(obj_meta):
+    classifier_list: List = list()
+    l_classifier = obj_meta.classifier_meta_list
+    while l_classifier is not None:
+        try:
+            class_meta = pyds.NvDsClassifierMeta.cast(l_classifier.data)
+        except StopIteration:
+            break
+
+        classifier_meta_contents: Dict = dict()
+        classifier_meta_contents[
+            "classifier_id"
+        ] = class_meta.unique_component_id
+
+        l_label_info = class_meta.label_info_list
+        label_info_list: List = list()
+        while l_label_info is not None:
+            try:
+                label_info_meta = pyds.NvDsLabelInfo.cast(l_label_info.data)
+            except StopIteration:
+                break
+            label_info_contents: Dict = dict()
+            label_info_contents["result_prob"] = label_info_meta.result_prob
+            label_info_contents["result_label"] = label_info_meta.result_label
+            label_info_contents[
+                "result_class_id"
+            ] = label_info_meta.result_class_id
+
+            label_info_list.append(label_info_contents)
+            try:
+                l_label_info = l_label_info.next
+            except StopIteration:
+                break
+
+        classifier_meta_contents["label_info_list"] = label_info_list
+        classifier_list.append(classifier_meta_contents)
+        try:
+            l_classifier = l_classifier.next
+        except StopIteration:
+            break
+
+    return classifier_list
+
+def parse_reid_meta(obj_meta):
+    l_user = obj_meta.obj_user_meta_list
+    while l_user is not None:
+        try:
+            user_meta = pyds.NvDsUserMeta.cast(l_user.data)
+        except StopIteration:
+            break
+
+        if (
+            user_meta.base_meta.meta_type
+            != pyds.NvDsMetaType.NVDSINFER_TENSOR_OUTPUT_META
+        ):
+            continue
+
+        tensor_meta = pyds.NvDsInferTensorMeta.cast(
+            user_meta.user_meta_data
+        )
+        layer = pyds.get_nvds_LayerInfo(tensor_meta, 0)
+        ptr = ctypes.cast(
+            pyds.get_ptr(layer.buffer), ctypes.POINTER(ctypes.c_float)
+        )
+        features = np.ctypeslib.as_array(ptr, shape=(512,))
+        # self.reid_features[obj_meta.object_id].append(features.tolist())
+        
+        try:
+            l_user = l_user.next
+        except StopIteration:
+            break
+        
+        return features.tolist()
 
 # TODO osnet user meta에 접근하여 feature data parsing필요.
 def parse_buffer2msg(buffer, msg):
@@ -169,6 +242,9 @@ def parse_buffer2msg(buffer, msg):
                 obj_meta = pyds.NvDsObjectMeta.cast(l_obj.data)
             except StopIteration:
                 break
+            
+            # ---- parser re-id info ---- #
+            reid_features = parse_reid_meta(obj_meta)
 
             # ---- Stacking object meta data ---- #
             obj_meta_contents: Dict = dict()
@@ -176,7 +252,7 @@ def parse_buffer2msg(buffer, msg):
             obj_meta_contents["obj_confid"] = obj_meta.confidence
             obj_meta_contents["obj_class_id"] = obj_meta.class_id
             obj_meta_contents["obj_class_label"] = obj_meta.obj_label
-
+            obj_meta_contents["obj_reid_feature"] = reid_features
             bbox_info_contents: Dict = dict()
             bbox_info_contents[
                 "height"
@@ -189,47 +265,11 @@ def parse_buffer2msg(buffer, msg):
 
             obj_meta_contents["tracker_bbox_info"] = bbox_info_contents
 
-            l_classifier = obj_meta.classifier_meta_list
-            classifier_list: List = list()
-            while l_classifier is not None:
-                try:
-                    class_meta = pyds.NvDsClassifierMeta.cast(l_classifier.data)
-                except StopIteration:
-                    break
-                classifier_meta_contents: Dict = dict()
-                classifier_meta_contents[
-                    "classifier_id"
-                ] = class_meta.unique_component_id
-
-                l_label_info = class_meta.label_info_list
-                label_info_list: List = list()
-                while l_label_info is not None:
-                    try:
-                        label_info_meta = pyds.NvDsLabelInfo.cast(l_label_info.data)
-                    except StopIteration:
-                        break
-                    label_info_contents: Dict = dict()
-                    label_info_contents["result_prob"] = label_info_meta.result_prob
-                    label_info_contents["result_label"] = label_info_meta.result_label
-                    label_info_contents[
-                        "result_class_id"
-                    ] = label_info_meta.result_class_id
-
-                    label_info_list.append(label_info_contents)
-                    try:
-                        l_label_info = l_label_info.next
-                    except StopIteration:
-                        break
-
-                classifier_meta_contents["label_info_list"] = label_info_list
-                classifier_list.append(classifier_meta_contents)
-                try:
-                    l_classifier = l_classifier.next
-                except StopIteration:
-                    break
-
+            # ---- parse classifier info ---- #
+            classifier_list = parse_classifier_meta(obj_meta)
             obj_meta_contents["classifier_list"] = classifier_list
             obj_list.append(obj_meta_contents)
+
             try:
                 l_obj = l_obj.next
             except StopIteration:

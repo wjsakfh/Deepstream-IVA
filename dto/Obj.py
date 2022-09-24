@@ -12,6 +12,7 @@ class PgieObj:
         self.bbox: Dict = self.__parse_bbox_info(obj_info["tracker_bbox_info"])
         self.pos: List[int] = self.__get_cpos(self.bbox)
         self.traj: List[List[int]] = [self.pos]  # traj: trajectory
+        self.reid_feature = obj_info["obj_reid_feature"]
         
         self.init_time: float = monotonic()
         self.last_time: float = monotonic()
