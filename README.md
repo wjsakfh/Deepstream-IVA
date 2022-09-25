@@ -1,8 +1,8 @@
 # Specific Area (ROI) In-Out-Person Re-identification System Using Deepstream
 
 ## Background
-- 실시간으로 여러 영상에서 특정 공간에 들어오고 나가는 사람에 대해 탐지하며, 들어온 사람과 나간 사람이 동일한 경우에 대해 매칭을 시켜주는 시스템이다.
-- 이는 대중교통의 승하차 시스템에 적용되어 특정인의 승차지와 하차지를 인지할 수 있다. 
+- It is a system that detects who enters and leaves a specific space from multiple stream sources in real time, and matches the case where the person entering and leaving are the same.
+- This can be applied to the boarding and disembarking system of public transportation to recognize a specific person's boarding and disembarking point.
 
 ### Features
 - Use deepstream pipeline
