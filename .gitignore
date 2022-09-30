@@ -7,3 +7,6 @@ spot_cam.mp4
 *.jpg
 *.mp4
 *.onnx
+Makefile
+*.json
+*.cpp

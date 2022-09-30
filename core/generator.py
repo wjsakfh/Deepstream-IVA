@@ -5,6 +5,8 @@ import cv2, os
 
 ALARM_THRES: float = 0.8
 IMG_DIR = "./result"
+
+
 class BaseAlarmGenerator:
     obj_list: List
 
@@ -31,7 +33,7 @@ class IntrusionAlarmGenerator(BaseAlarmGenerator):
 
         # 알람을 일으키는 오브젝트에 대해 crop 한다.
         # TODO 이미지 이름 형식에 대한 정의 필요
-        img_crop = img_cvt[bbox_info[1]:bbox_info[3], bbox_info[0]:bbox_info[2]]
+        img_crop = img_cvt[bbox_info[1] : bbox_info[3], bbox_info[0] : bbox_info[2]]
         img_path = os.path.join(img_dir, "test.jpg")
         cv2.imwrite(img_path, img_crop)
         raw_img_path = os.path.join(img_dir, "raw.jpg")

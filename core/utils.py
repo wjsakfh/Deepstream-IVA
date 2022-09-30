@@ -30,6 +30,22 @@ MIN_CONFIDENCE = 0.3
 MAX_CONFIDENCE = 0.4
 
 
+MAX_DISPLAY_LEN=64
+PGIE_CLASS_ID_VEHICLE = 0
+PGIE_CLASS_ID_BICYCLE = 1
+PGIE_CLASS_ID_PERSON = 2
+PGIE_CLASS_ID_ROADSIGN = 3
+MUXER_OUTPUT_WIDTH=1920
+MUXER_OUTPUT_HEIGHT=1080
+MUXER_BATCH_TIMEOUT_USEC=4000000
+TILED_OUTPUT_WIDTH=1280
+TILED_OUTPUT_HEIGHT=720
+GST_CAPS_FEATURES_NVMM="memory:NVMM"
+OSD_PROCESS_MODE= 0
+OSD_DISPLAY_TEXT= 1
+pgie_classes_str= ["Vehicle", "TwoWheeler", "Person","RoadSign"]
+
+
 class inference_parameter:
     def __init__(self):
         self.folder_name: str
@@ -204,7 +220,12 @@ def parse_reid_meta(obj_meta):
         return features.tolist()
 
 # TODO osnet user meta에 접근하여 feature data parsing필요.
+# TODO parsing되는 데이터들의 type을 면밀히 정해주어야할 필요 있음 (tracker bbox -> int, re_id_features -> List[int])
+
 def parse_buffer2msg(buffer, msg):
+    frame_number=0
+    num_rects=0
+
     gst_buffer = buffer
     if not gst_buffer:
         print("Unable to get GstBuffer ")
@@ -222,7 +243,15 @@ def parse_buffer2msg(buffer, msg):
             frame_meta = pyds.NvDsFrameMeta.cast(l_frame.data)
         except StopIteration:
             break
-
+        frame_number=frame_meta.frame_num
+        l_obj=frame_meta.obj_meta_list
+        num_rects = frame_meta.num_obj_meta
+        obj_counter = {
+        PGIE_CLASS_ID_VEHICLE:0,
+        PGIE_CLASS_ID_PERSON:0,
+        PGIE_CLASS_ID_BICYCLE:0,
+        PGIE_CLASS_ID_ROADSIGN:0
+        }
         frame_meta_contents = {
             "source_id": frame_meta.source_id,
             "source_height": frame_meta.source_frame_height,
@@ -242,7 +271,9 @@ def parse_buffer2msg(buffer, msg):
                 obj_meta = pyds.NvDsObjectMeta.cast(l_obj.data)
             except StopIteration:
                 break
-            
+            obj_counter[obj_meta.class_id] += 1
+            # print("Frame Number=", frame_number, "Number of Objects=",num_rects,"Vehicle_count=",obj_counter[PGIE_CLASS_ID_VEHICLE],"Person_count=",obj_counter[PGIE_CLASS_ID_PERSON])
+
             # ---- parser re-id info ---- #
             reid_features = parse_reid_meta(obj_meta)
 
