@@ -13,7 +13,7 @@ from dataclasses import dataclass
 
 # from algorithms import point_polygon_test
 import cv2, numpy as np
-from dto import PgieObj, EventConfig, Event
+from dto import PgieObj, EventConfig, Event, Source
 
 ## interface로 빼두어야 함.
 POLYGON = [[0, 0], [0, 1080], [960, 1080], [960, 0]]
@@ -30,16 +30,18 @@ event_config1 = EventConfig(0, True, "intrusion", roi1, "person", 3)
 event_config2 = EventConfig(0, True, "intrusion", roi2, "person", 3)
 event_config3 = EventConfig(1, True, "intrusion", roi1, "person", 3)
 event_config4 = EventConfig(1, True, "intrusion", roi2, "person", 3)
-
+print(event_config4.source_id)
 EVENT_CONFIGS = [event_config1, event_config2, event_config3, event_config4]
 
 
 class MsgManager:
     def __init__(self):
         # self.obj_info_list = obj_info_list
-        self.streams: Dict = {}
+        self.sources: Dict = {}
         self.obj_list: List = []
         self.timeout: float = 3.0
+        self.all_event_configs: List[EventConfig] = EVENT_CONFIGS
+
         # 정보 Extract
         # 리스트 업데이트
 
@@ -48,31 +50,25 @@ class MsgManager:
     # 그래야지 deepstream과 alarm generator를 분리할 수 있을 것임.
     def tiler_sink_pad_buffer_probe(self, pad, info, u_data):
         # msg manager
-        msg: Dict = dict()
+        msg: Dict = {}
         gst_buffer = info.get_buffer()
         parsed_msg, frame = parse_buffer2msg(gst_buffer, msg)
-        print("parsed_msg", parsed_msg)
+        # print("parsed_msg", parsed_msg)
 
-        event_cofigs = EVENT_CONFIGS
+        source_msg_list = parsed_msg["frame_list"]  # 각 source들의 msg list
+        for source_msg in source_msg_list:
+            source_id = source_msg["source_id"]
+            # TODO 추후 refactoring 필요. (source event configs를 어디서 업데이트 할 것인지)
+            source_event_configs = [
+                c for c in self.all_event_configs if c.source_id == source_id
+            ]
 
-        # # 만약 config가 최신이 아니라면 context를 업데이트 한다.
-        # if not self.ev_configure.is_latest(strm_id):
-        #     if strm_id in self.streams.keys():
-        #         # self.streams[strm_id].update(ev_configs)
-        #         self.streams[strm_id] = Stream(strm_id, ev_configs)
+            if src_id not in self.sources.keys():
+                self.sources[source_id] = Source(source_id, source_event_configs)
 
-        # # Stream 정리
-        # now = time.monotonic()
-        # self.streams = {i: s for (i, s) in self.streams.items()}
+            source = self.sources[source_id]
 
-        # if strm_id not in self.streams.keys():
-        #     self.streams[strm_id] = Stream(strm_id, ev_configs)
-        #     logging.debug("New object updated from new stream {}".format(str(strm_id)))
-        # else:
-        #     self.streams[strm_id].last_time = now
-
-        # # Stream 가져와서 객체를 정리
-        # stream = self.streams[strm_id]
+            # TODO source의 이벤트에 맞는 object를 관리한다.
 
         for frame_info in parsed_msg["frame_list"]:
             for obj_info in frame_info["obj_list"]:

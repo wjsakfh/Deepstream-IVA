@@ -4,19 +4,19 @@ from dataclasses import dataclass
 
 @dataclass
 class EventConfig:
-    stream_id: str
+    source_id: str
     enable: bool
-    name: List[str]
-    ROI: List[List[float]]
+    name: str
+    roi: List[List[float]]
     label: str
-    timeout: List[float]
+    timeout: float
 
 
 class Event:
     def __init__(self, event_config: EventConfig):
-        self.stream_id = event_config.stream_id
+        self.stream_id = event_config.source_id
         self.enable = event_config.enable
         self.event_name = event_config.name
         self.label = event_config.label
         self.event_timeout = event_config.timeout
-        self.ROI = event_config.ROI
+        self.ROI = event_config.roi
