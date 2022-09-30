@@ -63,7 +63,7 @@ class MsgManager:
                 c for c in self.all_event_configs if c.source_id == source_id
             ]
 
-            if src_id not in self.sources.keys():
+            if source_id not in self.sources.keys():
                 self.sources[source_id] = Source(source_id, source_event_configs)
 
             source = self.sources[source_id]
