@@ -67,27 +67,34 @@ class MsgManager:
                 self.sources[source_id] = Source(source_id, source_event_configs)
 
             source = self.sources[source_id]
-
+            print("source", source.event_list)
             # TODO source의 이벤트에 맞는 object를 관리한다.
+            for e in source.event_list:
+                # event에 맞는 object update.
+                # 먼저 특정 roi에 들어와있는 객체에 대해 판별한다.
+                # roi에 들어와있으면 우선 객체에 등록한다.
+                for obj_info in source_msg["obj_list"]:
+                    e.obj_list = self._update_obj_list(e.obj_list, PgieObj(obj_info))
 
-        for frame_info in parsed_msg["frame_list"]:
-            for obj_info in frame_info["obj_list"]:
-                # pgie_obj생성
-                # self.obj_list에 업데이트.
-                pgie_obj = PgieObj(obj_info)
-                self._update_obj_list(pgie_obj)
+        # for frame_info in parsed_msg["frame_list"]:
+        #     for obj_info in frame_info["obj_list"]:
+        #         # pgie_obj생성
+        #         # self.obj_list에 업데이트.
+        #         pgie_obj = PgieObj(obj_info)
+        #         self._update_obj_list(pgie_obj)
 
         intrusion_alarm_gen = IntrusionAlarmGenerator(self.obj_list, frame)
         intrusion_alarm_gen.run()
 
         return Gst.PadProbeReturn.OK
 
-    def _update_obj_list(self, pgie_obj):
+    def _update_obj_list(self, event_obj_list, pgie_obj):
         # pgie_obj: 현재 등록하려는 obj
         # obj: list에 이미 등록된 obj
-        self._register_obj(pgie_obj)
-        for obj in self.obj_list:
-            self._remove_obj(obj)
+        self._register_obj(event_obj_list, pgie_obj)
+        for obj in event_obj_list:
+            self._remove_obj(event_obj_list, obj)
+
             if obj.obj_id == pgie_obj.obj_id:
                 obj.last_time = pgie_obj.last_time
                 obj.pos = pgie_obj.pos
@@ -99,15 +106,17 @@ class MsgManager:
 
         del pgie_obj  # 등록을 마치고 메모리에서 삭제한다.
 
-    def _remove_obj(self, obj):
+        return event_obj_list
+        
+    def _remove_obj(self, event_obj_list, obj):
         # 일정시간이 지난 obj는 list에서 지운다.
         now = monotonic()
         if obj.last_time + self.timeout < now:
-            self.obj_list.remove(obj)
+            event_obj_list.remove(obj)
 
-    def _register_obj(self, pgie_obj):
+    def _register_obj(self, event_obj_list, pgie_obj):
         # list에 아무 obj가 등록되지 않았거나
         # 새로운 id의 obj가 나타났을 때 등록을 한다.
-        obj_id_list = [obj.obj_id for obj in self.obj_list]
+        obj_id_list = [obj.obj_id for obj in event_obj_list]
         if pgie_obj.obj_id not in obj_id_list:
-            self.obj_list.append(pgie_obj)
+            event_obj_list.append(pgie_obj)
