@@ -26,16 +26,18 @@ roi2 = [[960, 0], [960, 1080], [1920, 1080], [1920, 0]]
 
 # TODO 추후에 사용자가 event config를 등록 또는 수정할 수 있어야한다.
 
-event_config1 = EventConfig(0, True, "intrusion", roi1, "person", 3)
-event_config2 = EventConfig(0, True, "intrusion", roi2, "person", 3)
-event_config3 = EventConfig(1, True, "intrusion", roi1, "person", 3)
-event_config4 = EventConfig(1, True, "intrusion", roi2, "person", 3)
-print(event_config4.source_id)
-EVENT_CONFIGS = [event_config1, event_config2, event_config3, event_config4]
+event_config1 = EventConfig(0, True, "intrusion", roi1, "person", 0.5)
+# event_config2 = EventConfig(0, True, "intrusion_out", roi2, "person", 3)
+event_config3 = EventConfig(1, True, "intrusion", roi1, "person", 0.5)
+# event_config4 = EventConfig(1, True, "intrusion", roi2, "person", 3)
+# print(event_config4.source_id)
+# EVENT_CONFIGS = [event_config1, event_config2, event_config3, event_config4]
+EVENT_CONFIGS = [event_config1, event_config3]
 
 
 class MsgManager:
-    def __init__(self):
+    def __init__(self, dir_name):
+        self.dir_name = dir_name
         # self.obj_info_list = obj_info_list
         self.sources: Dict = {}
         self.obj_list: List = []
@@ -52,8 +54,8 @@ class MsgManager:
         # msg manager
         msg: Dict = {}
         gst_buffer = info.get_buffer()
-        parsed_msg, frame = parse_buffer2msg(gst_buffer, msg)
-        # print("parsed_msg", parsed_msg)
+        parsed_msg = parse_buffer2msg(gst_buffer, msg)
+        # print(parsed_msg)
 
         source_msg_list = parsed_msg["frame_list"]  # 각 source들의 msg list
         for source_msg in source_msg_list:
@@ -62,38 +64,31 @@ class MsgManager:
             source_event_configs = [
                 c for c in self.all_event_configs if c.source_id == source_id
             ]
-
             if source_id not in self.sources.keys():
                 self.sources[source_id] = Source(source_id, source_event_configs)
-
             source = self.sources[source_id]
-            print("source", source.event_list)
+            # print("source", source.event_list)
             # TODO source의 이벤트에 맞는 object를 관리한다.
             for e in source.event_list:
                 # event에 맞는 object update.
                 # 먼저 특정 roi에 들어와있는 객체에 대해 판별한다.
                 # roi에 들어와있으면 우선 객체에 등록한다.
                 for obj_info in source_msg["obj_list"]:
-                    e.obj_list = self._update_obj_list(e.obj_list, PgieObj(obj_info))
+                    e.obj_list = self._update_obj_list(e, PgieObj(obj_info, e.roi))
 
-        # for frame_info in parsed_msg["frame_list"]:
-        #     for obj_info in frame_info["obj_list"]:
-        #         # pgie_obj생성
-        #         # self.obj_list에 업데이트.
-        #         pgie_obj = PgieObj(obj_info)
-        #         self._update_obj_list(pgie_obj)
-
-        intrusion_alarm_gen = IntrusionAlarmGenerator(self.obj_list, frame)
-        intrusion_alarm_gen.run()
+                intrusion_alarm_gen = IntrusionAlarmGenerator(
+                    e, source_msg["source_frame"], self.dir_name
+                )
+                intrusion_alarm_gen.run()
 
         return Gst.PadProbeReturn.OK
 
-    def _update_obj_list(self, event_obj_list, pgie_obj):
+    def _update_obj_list(self, event: Event, pgie_obj: PgieObj):
         # pgie_obj: 현재 등록하려는 obj
         # obj: list에 이미 등록된 obj
-        self._register_obj(event_obj_list, pgie_obj)
-        for obj in event_obj_list:
-            self._remove_obj(event_obj_list, obj)
+        self._register_obj(event.obj_list, pgie_obj)
+        for obj in event.obj_list:
+            self._remove_obj(event.obj_list, obj)
 
             if obj.obj_id == pgie_obj.obj_id:
                 obj.last_time = pgie_obj.last_time
@@ -101,13 +96,13 @@ class MsgManager:
                 obj.bbox = pgie_obj.bbox
                 obj.traj.append(pgie_obj.pos)
 
-                obj.update_intrusion_flag(POLYGON)
+                obj.update_intrusion_flag()
                 obj.update_alarm_state()
 
         del pgie_obj  # 등록을 마치고 메모리에서 삭제한다.
 
-        return event_obj_list
-        
+        return event.obj_list
+
     def _remove_obj(self, event_obj_list, obj):
         # 일정시간이 지난 obj는 list에서 지운다.
         now = monotonic()
