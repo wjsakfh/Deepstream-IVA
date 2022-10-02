@@ -5,20 +5,22 @@ import numpy as np
 WIN_SIZE = 8
 ALARM_THRES: float = 0.8
 
+
 class PgieObj:
-    def __init__(self, obj_info):
+    def __init__(self, obj_info, event_roi):
         self.class_id: int = obj_info["obj_class_id"]
         self.obj_id: int = obj_info["obj_id"]
         self.bbox: Dict = self.__parse_bbox_info(obj_info["tracker_bbox_info"])
         self.pos: List[int] = self.__get_cpos(self.bbox)
         self.traj: List[List[int]] = [self.pos]  # traj: trajectory
         self.reid_feature = obj_info["obj_reid_feature"]
-        
+
         self.init_time: float = monotonic()
         self.last_time: float = monotonic()
 
-        self.alarm_filter_window: List = [False] * WIN_SIZE
-        self.alarm_check_list: List[bool, bool] = [False, False]
+        self.event_roi = event_roi
+        self.alarm_filter_window: List = [self.__polygon_in_test()] * WIN_SIZE
+        self.alarm_check_list: List[bool, bool] = [self.__polygon_in_test()] * 2
 
     def __parse_bbox_info(self, bbox_info):
         xmin = int(bbox_info["left"])
@@ -41,14 +43,14 @@ class PgieObj:
 
         return cpos
 
-    def update_intrusion_flag(self, polygon):
-        if len(polygon) < 3:
+    def __polygon_in_test(self):
+        if len(self.event_roi) < 3:
             return False
 
-        prev_point = polygon[-1]
+        prev_point = self.event_roi[-1]
         x0, y0 = self.pos[0], self.pos[1]
         line_count = 0
-        for point in polygon:
+        for point in self.event_roi:
             xa, ya = prev_point[0], prev_point[1]
             xb, yb = point[0], point[1]
             if x0 >= min(xa, xb) and x0 < max(xa, xb):
@@ -57,19 +59,21 @@ class PgieObj:
                     line_count += 1
             prev_point = point
 
-        included = True if line_count % 2 == 1 else False
+        included = bool(line_count % 2 == 1)
 
+        return included
+
+    def update_intrusion_flag(self):
+        included = self.__polygon_in_test()
         self.alarm_filter_window.pop(0)
         self.alarm_filter_window.append(included)
 
-    def update_alarm_state(self,):
+    def update_alarm_state(
+        self,
+    ):
         average_window = self.alarm_filter_window
         window_mean = np.mean(average_window)
+        alarm_check = bool(window_mean > ALARM_THRES)
 
-        if window_mean > ALARM_THRES:
-            alarm_check = True
-        else:
-            alarm_check = False
-        
         self.alarm_check_list.pop(0)
         self.alarm_check_list.append(alarm_check)
