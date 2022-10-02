@@ -36,7 +36,9 @@ def main(args):
 
     global folder_name
     folder_name = args[-1]
-    inference_parameter.folder_name = folder_name
+    SetSaveDir(folder_name)
+
+    # inference_parameter.folder_name = folder_name
 
     # if path.exists(folder_name):
     #     sys.stderr.write(
@@ -149,6 +151,7 @@ def main(args):
     streammux.set_property("height", 1080)
     streammux.set_property("batch-size", number_sources)
     streammux.set_property("batched-push-timeout", 4000000)
+    # streammux.set_property("sync-inputs", 1)
     pgie.set_property(
         "config-file-path", "./inference_source/pgie/personnet/dstest1_pgie_config.txt"
     )
@@ -190,9 +193,7 @@ def main(args):
 
     # Set properties of tracker
     config = configparser.ConfigParser()
-    config.read(
-        "/home/snu-nx2/Works/Deepstream-IVA/inference_source/tracker/dstest2_tracker_config.txt"
-    )
+    config.read("inference_source/tracker/deepsort/deepsort_tracker_config.txt")
     config.sections()
 
     for key in config["tracker"]:
@@ -255,7 +256,7 @@ def main(args):
     bus.connect("message", bus_call, loop)
 
     tiler_sink_pad = tiler.get_static_pad("sink")
-    msg_manager = MsgManager()
+    msg_manager = MsgManager(folder_name)
 
     if not tiler_sink_pad:
         sys.stderr.write(" Unable to get src pad \n")

@@ -1,5 +1,6 @@
 import sys
 import gi
+import os
 
 gi.require_version("Gst", "1.0")
 from gi.repository import GObject, Gst
@@ -30,25 +31,39 @@ MIN_CONFIDENCE = 0.3
 MAX_CONFIDENCE = 0.4
 
 
-MAX_DISPLAY_LEN=64
+MAX_DISPLAY_LEN = 64
 PGIE_CLASS_ID_VEHICLE = 0
 PGIE_CLASS_ID_BICYCLE = 1
 PGIE_CLASS_ID_PERSON = 2
 PGIE_CLASS_ID_ROADSIGN = 3
-MUXER_OUTPUT_WIDTH=1920
-MUXER_OUTPUT_HEIGHT=1080
-MUXER_BATCH_TIMEOUT_USEC=4000000
-TILED_OUTPUT_WIDTH=1280
-TILED_OUTPUT_HEIGHT=720
-GST_CAPS_FEATURES_NVMM="memory:NVMM"
-OSD_PROCESS_MODE= 0
-OSD_DISPLAY_TEXT= 1
-pgie_classes_str= ["Vehicle", "TwoWheeler", "Person","RoadSign"]
+MUXER_OUTPUT_WIDTH = 1920
+MUXER_OUTPUT_HEIGHT = 1080
+MUXER_BATCH_TIMEOUT_USEC = 4000000
+TILED_OUTPUT_WIDTH = 1280
+TILED_OUTPUT_HEIGHT = 720
+GST_CAPS_FEATURES_NVMM = "memory:NVMM"
+OSD_PROCESS_MODE = 0
+OSD_DISPLAY_TEXT = 1
+pgie_classes_str = ["Vehicle", "TwoWheeler", "Person", "RoadSign"]
 
 
-class inference_parameter:
-    def __init__(self):
-        self.folder_name: str
+class SetSaveDir:
+    def __init__(self, dir_name):
+        self.dir_name = dir_name
+        self.__prepare()
+
+    def __prepare(self):
+        dir_path = os.path.join(os.getcwd(), self.dir_name)
+
+        if not os.path.isdir(dir_path):
+            os.mkdir(dir_path)
+            in_path = os.path.join(dir_path, "in")
+            out_path = os.path.join(dir_path, "out")
+            
+            os.mkdir(in_path)
+            print("in event directory made.")
+            os.mkdir(out_path)
+            print("out event directory made.")
 
 
 def layer_finder(output_layer_info, name):
@@ -145,6 +160,7 @@ def create_source_bin(index, uri):
         return None
     return nbin
 
+
 def parse_classifier_meta(obj_meta):
     classifier_list: List = list()
     l_classifier = obj_meta.classifier_meta_list
@@ -155,9 +171,7 @@ def parse_classifier_meta(obj_meta):
             break
 
         classifier_meta_contents: Dict = dict()
-        classifier_meta_contents[
-            "classifier_id"
-        ] = class_meta.unique_component_id
+        classifier_meta_contents["classifier_id"] = class_meta.unique_component_id
 
         l_label_info = class_meta.label_info_list
         label_info_list: List = list()
@@ -169,9 +183,7 @@ def parse_classifier_meta(obj_meta):
             label_info_contents: Dict = dict()
             label_info_contents["result_prob"] = label_info_meta.result_prob
             label_info_contents["result_label"] = label_info_meta.result_label
-            label_info_contents[
-                "result_class_id"
-            ] = label_info_meta.result_class_id
+            label_info_contents["result_class_id"] = label_info_meta.result_class_id
 
             label_info_list.append(label_info_contents)
             try:
@@ -188,6 +200,7 @@ def parse_classifier_meta(obj_meta):
 
     return classifier_list
 
+
 def parse_reid_meta(obj_meta):
     l_user = obj_meta.obj_user_meta_list
     while l_user is not None:
@@ -202,29 +215,27 @@ def parse_reid_meta(obj_meta):
         ):
             continue
 
-        tensor_meta = pyds.NvDsInferTensorMeta.cast(
-            user_meta.user_meta_data
-        )
+        tensor_meta = pyds.NvDsInferTensorMeta.cast(user_meta.user_meta_data)
         layer = pyds.get_nvds_LayerInfo(tensor_meta, 0)
-        ptr = ctypes.cast(
-            pyds.get_ptr(layer.buffer), ctypes.POINTER(ctypes.c_float)
-        )
+        ptr = ctypes.cast(pyds.get_ptr(layer.buffer), ctypes.POINTER(ctypes.c_float))
         features = np.ctypeslib.as_array(ptr, shape=(512,))
         # self.reid_features[obj_meta.object_id].append(features.tolist())
-        
+
         try:
             l_user = l_user.next
         except StopIteration:
             break
-        
+
         return features.tolist()
+
 
 # TODO osnet user meta에 접근하여 feature data parsing필요.
 # TODO parsing되는 데이터들의 type을 면밀히 정해주어야할 필요 있음 (tracker bbox -> int, re_id_features -> List[int])
 
+
 def parse_buffer2msg(buffer, msg):
-    frame_number=0
-    num_rects=0
+    frame_number = 0
+    num_rects = 0
 
     gst_buffer = buffer
     if not gst_buffer:
@@ -243,17 +254,21 @@ def parse_buffer2msg(buffer, msg):
             frame_meta = pyds.NvDsFrameMeta.cast(l_frame.data)
         except StopIteration:
             break
-        frame_number=frame_meta.frame_num
-        l_obj=frame_meta.obj_meta_list
+        frame_number = frame_meta.frame_num
+        l_obj = frame_meta.obj_meta_list
         num_rects = frame_meta.num_obj_meta
         obj_counter = {
-        PGIE_CLASS_ID_VEHICLE:0,
-        PGIE_CLASS_ID_PERSON:0,
-        PGIE_CLASS_ID_BICYCLE:0,
-        PGIE_CLASS_ID_ROADSIGN:0
+            PGIE_CLASS_ID_VEHICLE: 0,
+            PGIE_CLASS_ID_PERSON: 0,
+            PGIE_CLASS_ID_BICYCLE: 0,
+            PGIE_CLASS_ID_ROADSIGN: 0,
         }
+
+        n_frame = pyds.get_nvds_buf_surface(hash(gst_buffer), frame_meta.batch_id)
+
         frame_meta_contents = {
             "source_id": frame_meta.source_id,
+            "source_frame": n_frame,
             "source_height": frame_meta.source_frame_height,
             "source_width": frame_meta.source_frame_width,
             "source_time": frame_meta.ntp_timestamp,
@@ -263,7 +278,6 @@ def parse_buffer2msg(buffer, msg):
 
         # Getting Image data using nvbufsurface
         # the input should be address of buffer and batch_id
-        n_frame = pyds.get_nvds_buf_surface(hash(gst_buffer), frame_meta.batch_id)
 
         obj_list: List = list()
         while l_obj is not None:
@@ -315,7 +329,7 @@ def parse_buffer2msg(buffer, msg):
 
     msg["frame_list"] = frame_list
 
-    return msg, n_frame
+    return msg
 
 
 def draw_bounding_boxes(image, obj_meta, confidence):
