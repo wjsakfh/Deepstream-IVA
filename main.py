@@ -4,7 +4,7 @@ sys.path.append("../")
 import gi
 
 gi.require_version("Gst", "1.0")
-from gi.repository import GObject, Gst
+from gi.repository import GObject, Gst, GLib
 from common.is_aarch_64 import is_aarch64
 from common.bus_call import bus_call
 from core.utils import *
@@ -19,9 +19,10 @@ from os import path
 import os
 import math
 from core.manageDB import MsgManager
-
 # TODO osnet 파이프라인 구성 돌아가는 지 확인.
 # TODO osnet과 classifier정보 저장할 수 있게 바꾸기
+TILED_OUTPUT_WIDTH=1280
+TILED_OUTPUT_HEIGHT=720
 def main(args):
     # Check input arguments
     if len(args) < 2:
@@ -29,9 +30,6 @@ def main(args):
             "usage: %s <uri1> [uri2] ... [uriN] <folder to save frames>\n" % args[0]
         )
         sys.exit(1)
-
-    for i in range(0, len(args) - 2):
-        fps_streams["stream{0}".format(i)] = GETFPS(i)
     number_sources = len(args) - 2
 
     global folder_name
@@ -70,9 +68,6 @@ def main(args):
 
     pipeline.add(streammux)
     for i in range(number_sources):
-        # os.mkdir(folder_name + "/stream_" + str(i))
-        frame_count["stream_" + str(i)] = 0
-        saved_count["stream_" + str(i)] = 0
         print("Creating source_bin ", i, " \n ")
         uri_name = args[i + 1]
         if uri_name.find("rtsp://") == 0:
@@ -139,7 +134,7 @@ def main(args):
             sys.stderr.write(" Unable to create transform \n")
 
     print("Creating EGLSink \n")
-    sink = Gst.ElementFactory.make("nveglglessink", "nvvideo-renderer")
+    sink = Gst.ElementFactory.make("fakesink", "nvvideo-renderer")
     if not sink:
         sys.stderr.write(" Unable to create egl sink \n")
 
@@ -153,7 +148,7 @@ def main(args):
     streammux.set_property("batched-push-timeout", 4000000)
     # streammux.set_property("sync-inputs", 1)
     pgie.set_property(
-        "config-file-path", "./inference_source/pgie/personnet/dstest1_pgie_config.txt"
+        "config-file-path", "./source/inference_source/pgie/personnet/dstest1_pgie_config.txt"
     )
     pgie_batch_size = pgie.get_property("batch-size")
     if pgie_batch_size != number_sources:
@@ -167,10 +162,10 @@ def main(args):
         pgie.set_property("batch-size", number_sources)
 
     sgie.set_property(
-        "config-file-path", "./inference_source/sgie/masknet/infer_nvinfer_config.txt"
+        "config-file-path", "./source/inference_source/sgie/masknet/infer_nvinfer_config.txt"
     )
 
-    reid.set_property("config-file-path", "inference_source/re-id/osnet.txt")
+    reid.set_property("config-file-path", "./source/inference_source/re-id/osnet.txt")
 
     tiler_rows = int(math.sqrt(number_sources))
     tiler_columns = int(math.ceil((1.0 * number_sources) / tiler_rows))
@@ -193,7 +188,7 @@ def main(args):
 
     # Set properties of tracker
     config = configparser.ConfigParser()
-    config.read("inference_source/tracker/deepsort/deepsort_tracker_config.txt")
+    config.read("./source/inference_source/tracker/deepsort/deepsort_tracker_config.txt")
     config.sections()
 
     for key in config["tracker"]:
@@ -250,7 +245,7 @@ def main(args):
         nvosd.link(sink)
 
     # create an event loop and feed gstreamer bus mesages to it
-    loop = GObject.MainLoop()
+    loop = GLib.MainLoop()
     bus = pipeline.get_bus()
     bus.add_signal_watch()
     bus.connect("message", bus_call, loop)
@@ -281,6 +276,10 @@ def main(args):
     except:
         pass
     # cleanup
+    for key, value in msg_manager.vid_outs.items():
+        print("video release", key)
+        value.release()
+
     print("Exiting app\n")
     pipeline.set_state(Gst.State.NULL)
 

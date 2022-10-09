@@ -32,16 +32,21 @@ class IntrusionAlarmGenerator(BaseAlarmGenerator):
             if (
                 not obj.alarm_check_list[0] and obj.alarm_check_list[1]
             ):  # ROI 밖에서 안으로 <=> intrusion in event
-
                 self.save_alarm_img_in(self.in_dir_path, self.event, self.frame, obj)
             elif (
                 obj.alarm_check_list[0] and not obj.alarm_check_list[1]
             ):  # ROI 안에서 밖으로 <=> intrusion out event
                 self.save_alarm_img_out(self.out_dir_path, self.event, self.frame, obj)
+            # else:
+            #     self.event.info["status"] = "none"
 
     def save_alarm_img_in(self, img_dir, event, img, obj):
         event.info["count_in"] += 1
         event.info["status"] = "in"
+        for sgie_id, value in obj.secondary_info.items():
+            if value[-1] == 0: # mask wear
+                event.info["mask_in"] += 1
+
         bbox_info = obj.bbox
         img_cvt = cv2.cvtColor(img, cv2.COLOR_RGBA2BGRA)
         event_name = event.name + "_in"
@@ -53,11 +58,15 @@ class IntrusionAlarmGenerator(BaseAlarmGenerator):
         img_path = os.path.join(
             img_dir, "%s_%s_%s.jpg" % (source_id, obj.obj_id, event_name)
         )
-        cv2.imwrite(img_path, img_crop)
+        # cv2.imwrite(img_path, img_crop)
 
     def save_alarm_img_out(self, img_dir, event, img, obj):
         event.info["count_out"] += 1
         event.info["status"] = "out"
+        for sgie_id, value in obj.secondary_info.items():
+            if value[-1] == 0: # mask wear
+                event.info["mask_out"] += 1
+
 
         bbox_info = obj.bbox
         img_cvt = cv2.cvtColor(img, cv2.COLOR_RGBA2BGRA)
@@ -70,4 +79,4 @@ class IntrusionAlarmGenerator(BaseAlarmGenerator):
         img_path = os.path.join(
             img_dir, "%s_%s_%s.jpg" % (source_id, obj.obj_id, event_name)
         )
-        cv2.imwrite(img_path, img_crop)
+        # cv2.imwrite(img_path, img_crop)

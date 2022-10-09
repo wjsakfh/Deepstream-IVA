@@ -15,6 +15,13 @@ class PgieObj:
         self.traj: List[List[int]] = [self.pos]  # traj: trajectory
         self.reid_feature = obj_info["obj_reid_feature"]
 
+        self.secondary_info: Dict[str, List] = {}
+
+        for s in obj_info["classifier_list"]:  # s: secondary classifier
+            self.secondary_info[s["classifier_id"]] = [
+                s["label_info"]["result_class_id"]
+            ]
+            
         self.init_time: float = monotonic()
         self.last_time: float = monotonic()
 
