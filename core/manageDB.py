@@ -22,17 +22,18 @@ from dto import PgieObj, EventConfig, Event, Source
 # 이를 바깥 쪽에서 쓸 수 있으면 좋을 것 같음.
 roi1 = [[0, 0], [0, 1080], [960, 1080], [960, 0]]
 roi2 = [[960, 0], [960, 1080], [1920, 1080], [1920, 0]]
+roi_B = [[553,0],[600,660],[677,624],[702, 734], [1192,504],[1685, 770], [1705, 210], [1476, 144], [1296, 127], [1283, 249], [1265, 390], [1344, 421], [1250, 480], [1266, 270], [1165, 240], [1181, 46]]
+roi_B2 = [[553,0],[553,1080],[1910,1080],[1910, 0]]
 
 # TODO 추후에 사용자가 event config를 등록 또는 수정할 수 있어야한다.
 
-event_config1 = EventConfig(0, 1, True, "intrusion", roi1, "person", 0.5)
+event_config1 = EventConfig(0, 1, True, "intrusion", roi_B2, "person", 0.1)
 # event_config2 = EventConfig(0, True, "intrusion_out", roi2, "person", 3)
-event_config3 = EventConfig(1, 3, True, "intrusion", roi2, "person", 0.5)
+event_config3 = EventConfig(1, 3, True, "intrusion", roi2, "person", 0.1)
 # event_config4 = EventConfig(1, True, "intrusion", roi2, "person", 3)
-# print(event_config4.source_id)
 # EVENT_CONFIGS = [event_config1, event_config2, event_config3, event_config4]
-EVENT_CONFIGS = [event_config1, event_config3]
-FCC = cv2.VideoWriter_fourcc('D', 'I', 'V', 'X')
+EVENT_CONFIGS = [event_config1]
+# FCC = cv2.VideoWriter_fourcc('D', 'I', 'V', 'X')
 
 class MsgManager:
     def __init__(self, dir_name):
@@ -40,9 +41,9 @@ class MsgManager:
         # self.obj_info_list = obj_info_list
         self.sources: Dict = {}
         self.obj_list: List = []
-        self.timeout: float = 3.0
+        self.timeout: float = 0.1
         self.all_event_configs: List[EventConfig] = EVENT_CONFIGS
-        self.vid_outs: Dict = {"_".join([str(e_c.source_id), str(e_c.event_id)]): cv2.VideoWriter("frames/out/%s.avi"%("_".join([str(e_c.source_id), str(e_c.event_id)])),FCC, 30, (1920, 1080)) for e_c in EVENT_CONFIGS}
+        # self.vid_outs: Dict = {"_".join([str(e_c.source_id), str(e_c.event_id)]): cv2.VideoWriter("frames/out/%s.avi"%("_".join([str(e_c.source_id), str(e_c.event_id)])),FCC, 10, (1920, 1080)) for e_c in EVENT_CONFIGS}
         # 정보 Extract
         # 리스트 업데이트
 
@@ -54,7 +55,6 @@ class MsgManager:
         msg: Dict = {}
         gst_buffer = info.get_buffer()
         parsed_msg = self.__parse_buffer2msg(gst_buffer, msg)
-        # print(parsed_msg)
 
         source_msg_list = parsed_msg["frame_list"]  # 각 source들의 msg list
         for source_msg in source_msg_list:
@@ -97,21 +97,20 @@ class MsgManager:
             else:
                 img_poly = cv2.polylines(img_bbox, [np.array(e.roi, np.int32)], True, (0,0,0), 2)
             
-            # print("source.id", source.id, type(source.id))
-            # print(self.vid_outs[str(source.id)])
-            # cv2.imwrite("frames/out/img%s.jpg"%monotonic(), img_text)
-            
-            self.vid_outs["_".join([str(e.source_id), str(e.event_id)])].write(img_poly)
-            
 
     def __update_event_info(self, source, source_msg):
         for e in source.event_list:
             # event에 맞는 object update.
             # 먼저 특정 roi에 들어와있는 객체에 대해 판별한다.
             # roi에 들어와있으면 우선 객체에 등록한다.
-            for obj_info in source_msg["obj_list"]:
-                e.obj_list = self._update_obj_list(e, PgieObj(obj_info, e.roi))
 
+            if len(source_msg["obj_list"]) == 0:
+                for obj in e.obj_list:
+                    self._remove_obj(e.obj_list, obj)
+            else:
+                for obj_info in source_msg["obj_list"]:
+                    e.obj_list = self._update_obj_list(e, PgieObj(obj_info, e.roi))
+            
             intrusion_alarm_gen = IntrusionAlarmGenerator(
                 e, source_msg["source_frame"], self.dir_name
             )
@@ -123,7 +122,6 @@ class MsgManager:
         self._register_obj(event.obj_list, pgie_obj)
         for obj in event.obj_list:
             self._remove_obj(event.obj_list, obj)
-
             if obj.obj_id == pgie_obj.obj_id:
                 obj.last_time = monotonic()
                 obj.pos = pgie_obj.pos

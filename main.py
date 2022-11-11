@@ -148,7 +148,7 @@ def main(args):
     streammux.set_property("batched-push-timeout", 4000000)
     # streammux.set_property("sync-inputs", 1)
     pgie.set_property(
-        "config-file-path", "./source/inference_source/pgie/personnet/dstest1_pgie_config.txt"
+        "config-file-path", "/opt/workspace/DeepStream-Yolo/config_infer_primary_yoloV5.txt"
     )
     pgie_batch_size = pgie.get_property("batch-size")
     if pgie_batch_size != number_sources:
@@ -188,7 +188,7 @@ def main(args):
 
     # Set properties of tracker
     config = configparser.ConfigParser()
-    config.read("./source/inference_source/tracker/deepsort/deepsort_tracker_config.txt")
+    config.read("/opt/workspace/source/inference_source/tracker/dstest2_tracker_config.txt")
     config.sections()
 
     for key in config["tracker"]:
@@ -276,9 +276,6 @@ def main(args):
     except:
         pass
     # cleanup
-    for key, value in msg_manager.vid_outs.items():
-        print("video release", key)
-        value.release()
 
     print("Exiting app\n")
     pipeline.set_state(Gst.State.NULL)

@@ -178,7 +178,6 @@ def main(args):
         print("Atleast one of the sources is live")
         streammux.set_property("live-source", 1)
 
-    # print("Playing file %s " %args[1])
     # source.set_property('location', args[1])
     streammux.set_property("width", 1920)
     streammux.set_property("height", 1080)

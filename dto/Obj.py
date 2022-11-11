@@ -2,8 +2,8 @@ from typing import List, Tuple, Dict
 from time import monotonic
 import numpy as np
 
-WIN_SIZE = 8
-ALARM_THRES: float = 0.8
+WIN_SIZE = 2
+ALARM_THRES: float = 0.5
 
 
 class PgieObj:
