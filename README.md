@@ -80,16 +80,7 @@
 
 - 여기에 사용되는 모델은 passenger detector로 yolov7, mask classifier로 resnet, re-identifier feature extractor로 osnet 모델(https://github.com/KaiyangZhou/deep-person-reid)을 각각 사용했고 Customizing하게 학습시킨 모델은 Detector yolov7이다.
 - yolov7 모델 학습은 공식레포(https://github.com/WongKinYiu/yolov7.git)를 이용했으며, 학습 후 yolov7모델을 tensorrt engine파일로 변환하는 작업은 다음 레포(https://github.com/marcoslucianops/DeepStream-Yolo) 를 참고하였다.
-    - 데이터 위치: NIPA서버 (IP: 14.49.45.209) - `~/Projects/Bus_passenger_AIHUB/data`
-        
-        ```
-        Bus_passenger_AIHUB
-        ├── data
-            ├── images
-            ├── labels
-            └── val
-        ```
-        
+    - 데이터 : AIHUB 버스승샛 승하차 데이터 이용
 
 ## 구동 결과 저장
 
