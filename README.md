@@ -35,7 +35,7 @@
     
 4. 다음 명령어로 영상소스에 대한 버스 승하차 분석 결과를 볼 수 있다.
     
-    `python3 [main.py](http://main.py) file:///{동영상소스절대경로}/sample.mp4 file:///{동영상소스절대경로}/sample2.mp4 {output디렉토리경로}`
+    `python3 main.py file:///{동영상소스절대경로}/sample.mp4 file:///{동영상소스절대경로}/sample2.mp4 {output디렉토리경로}`
     
 - (참고) docker 환경으로 쉽게 개발하기 위해 vscode extension인 `Dev Containers`를 이용하면 좋다.
 
