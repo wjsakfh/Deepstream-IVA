@@ -11,7 +11,6 @@ class EventConfig:
     name: str
     roi: List[List[float]]
     label: str
-    timeout: float
 
 
 class Event:

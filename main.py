@@ -148,8 +148,11 @@ def main(args):
     streammux.set_property("batched-push-timeout", 4000000)
     # streammux.set_property("sync-inputs", 1)
     pgie.set_property(
-        "config-file-path", "/opt/workspace/DeepStream-Yolo/config_infer_primary_yoloV5.txt"
+        "config-file-path", "./source/inference_source/pgie/config_infer_primary_yoloV7.txt"
     )
+    # pgie.set_property(
+    #     "config-file-path", "/opt/workspace/source/inference_source/pgie/personnet/dstest1_pgie_config.txt"
+    # )
     pgie_batch_size = pgie.get_property("batch-size")
     if pgie_batch_size != number_sources:
         print(
@@ -162,10 +165,10 @@ def main(args):
         pgie.set_property("batch-size", number_sources)
 
     sgie.set_property(
-        "config-file-path", "./source/inference_source/sgie/masknet/infer_nvinfer_config.txt"
+        "config-file-path", "./source/inference_source/sgie/infer_nvinfer_config.txt"
     )
 
-    reid.set_property("config-file-path", "./source/inference_source/re-id/osnet.txt")
+    reid.set_property("config-file-path", "./source/inference_source/re-id/infer_nvinfer_config.txt")
 
     tiler_rows = int(math.sqrt(number_sources))
     tiler_columns = int(math.ceil((1.0 * number_sources) / tiler_rows))

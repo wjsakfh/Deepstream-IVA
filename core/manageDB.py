@@ -10,29 +10,18 @@ import pyds, ctypes
 
 from time import monotonic
 from typing import List, Dict
-# from core.utils import __parse_buffer2msg
 from dataclasses import dataclass
 
-# from algorithms import point_polygon_test
 import cv2, numpy as np
 from dto import PgieObj, EventConfig, Event, Source
 
-# AlarmGenerator를 담고 있기엔 이름의 범위가 좁음
-# MsgManager가 들고있는 최종 Result는 self.obj_list 여야함.
-# 이를 바깥 쪽에서 쓸 수 있으면 좋을 것 같음.
 roi1 = [[0, 0], [0, 1080], [960, 1080], [960, 0]]
 roi2 = [[960, 0], [960, 1080], [1920, 1080], [1920, 0]]
-roi_B = [[553,0],[600,660],[677,624],[702, 734], [1192,504],[1685, 770], [1705, 210], [1476, 144], [1296, 127], [1283, 249], [1265, 390], [1344, 421], [1250, 480], [1266, 270], [1165, 240], [1181, 46]]
-roi_B2 = [[553,0],[553,1080],[1910,1080],[1910, 0]]
 
 # TODO 추후에 사용자가 event config를 등록 또는 수정할 수 있어야한다.
-
-event_config1 = EventConfig(0, 1, True, "intrusion", roi_B2, "person", 0.1)
-# event_config2 = EventConfig(0, True, "intrusion_out", roi2, "person", 3)
-event_config3 = EventConfig(1, 3, True, "intrusion", roi2, "person", 0.1)
-# event_config4 = EventConfig(1, True, "intrusion", roi2, "person", 3)
-# EVENT_CONFIGS = [event_config1, event_config2, event_config3, event_config4]
-EVENT_CONFIGS = [event_config1]
+event_config2 = EventConfig(0, 1, True, "take", roi1, "person")
+event_config6 = EventConfig(1, 2, True, "take", roi2, "person")
+EVENT_CONFIGS = [event_config2, event_config6]
 # FCC = cv2.VideoWriter_fourcc('D', 'I', 'V', 'X')
 
 class MsgManager:
@@ -41,7 +30,7 @@ class MsgManager:
         # self.obj_info_list = obj_info_list
         self.sources: Dict = {}
         self.obj_list: List = []
-        self.timeout: float = 0.1
+        self.timeout: float = 10
         self.all_event_configs: List[EventConfig] = EVENT_CONFIGS
         # self.vid_outs: Dict = {"_".join([str(e_c.source_id), str(e_c.event_id)]): cv2.VideoWriter("frames/out/%s.avi"%("_".join([str(e_c.source_id), str(e_c.event_id)])),FCC, 10, (1920, 1080)) for e_c in EVENT_CONFIGS}
         # 정보 Extract
@@ -55,7 +44,6 @@ class MsgManager:
         msg: Dict = {}
         gst_buffer = info.get_buffer()
         parsed_msg = self.__parse_buffer2msg(gst_buffer, msg)
-
         source_msg_list = parsed_msg["frame_list"]  # 각 source들의 msg list
         for source_msg in source_msg_list:
             source_id = source_msg["source_id"]
@@ -68,8 +56,9 @@ class MsgManager:
             source = self.sources[source_id]
 
             # TODO source의 이벤트에 맞는 object를 관리한다.
+            print("source_id", source_id)
             self.__update_event_info(source, source_msg)
-            self.__display_event_info(source, source_msg)
+            # self.__display_event_info(source, source_msg)
 
         return Gst.PadProbeReturn.OK
 
@@ -103,14 +92,12 @@ class MsgManager:
             # event에 맞는 object update.
             # 먼저 특정 roi에 들어와있는 객체에 대해 판별한다.
             # roi에 들어와있으면 우선 객체에 등록한다.
-
             if len(source_msg["obj_list"]) == 0:
                 for obj in e.obj_list:
                     self._remove_obj(e.obj_list, obj)
             else:
                 for obj_info in source_msg["obj_list"]:
                     e.obj_list = self._update_obj_list(e, PgieObj(obj_info, e.roi))
-            
             intrusion_alarm_gen = IntrusionAlarmGenerator(
                 e, source_msg["source_frame"], self.dir_name
             )
@@ -219,7 +206,6 @@ class MsgManager:
                 break
 
             return features.tolist()
-
 
     # TODO osnet user meta에 접근하여 feature data parsing필요.
     # TODO parsing되는 데이터들의 type을 면밀히 정해주어야할 필요 있음 (tracker bbox -> int, re_id_features -> List[int])

@@ -2,7 +2,7 @@ from typing import List, Tuple, Dict
 from time import monotonic
 import numpy as np
 
-WIN_SIZE = 2
+WIN_SIZE = 30
 ALARM_THRES: float = 0.5
 
 
@@ -78,9 +78,7 @@ class PgieObj:
     def update_alarm_state(
         self,
     ):
-        average_window = self.alarm_filter_window
-        window_mean = np.mean(average_window)
-        alarm_check = bool(window_mean > ALARM_THRES)
-
+        lastest_mean = np.mean(self.alarm_filter_window[int(WIN_SIZE/2):])
+        intrusion_check = bool(lastest_mean >= ALARM_THRES)
         self.alarm_check_list.pop(0)
-        self.alarm_check_list.append(alarm_check)
+        self.alarm_check_list.append(intrusion_check)

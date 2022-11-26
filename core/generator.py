@@ -25,13 +25,16 @@ class IntrusionAlarmGenerator(BaseAlarmGenerator):
 
     def run(self):
         for obj in self.obj_list:
+            # print("obj.alarm_check_list", obj.alarm_check_list)
             if (
                 not obj.alarm_check_list[0] and obj.alarm_check_list[1]
             ):  # ROI 밖에서 안으로 <=> intrusion in event
+                print("obj", obj)
                 self.save_alarm_img_in(self.in_dir_path, self.event, self.frame, obj)
             elif (
                 obj.alarm_check_list[0] and not obj.alarm_check_list[1]
             ):  # ROI 안에서 밖으로 <=> intrusion out event
+                print("obj", obj)
                 self.save_alarm_img_out(self.out_dir_path, self.event, self.frame, obj)
             # else:
             #     self.event.info["status"] = "none"
@@ -59,19 +62,19 @@ class IntrusionAlarmGenerator(BaseAlarmGenerator):
         with open(json_path, "w") as json_file:
             json.dump(obj_dict, json_file, indent=4)
 
-        # # ---- save image ---- #
-        # bbox_info = obj.bbox
-        # img_cvt = cv2.cvtColor(img, cv2.COLOR_RGBA2BGRA)
-        # event_name = event.name + "_in"
-        # source_id = event.source_id
+        # ---- save image ---- #
+        bbox_info = obj.bbox
+        img_cvt = cv2.cvtColor(img, cv2.COLOR_RGBA2BGRA)
+        event_name = event.name + "_in"
+        source_id = event.source_id
 
-        # # 알람을 일으키는 오브젝트에 대해 crop 한다.
-        # # TODO 이미지 이름 형식에 대한 정의 필요
-        # img_crop = img_cvt[bbox_info[1] : bbox_info[3], bbox_info[0] : bbox_info[2]]
-        # img_path = os.path.join(
-        #     img_dir, "%s_%s_%s.jpg" % (source_id, obj.obj_id, event_name)
-        # )
-        # cv2.imwrite(img_path, img_crop)
+        # 알람을 일으키는 오브젝트에 대해 crop 한다.
+        # TODO 이미지 이름 형식에 대한 정의 필요
+        img_crop = img_cvt[bbox_info[1] : bbox_info[3], bbox_info[0] : bbox_info[2]]
+        img_path = os.path.join(
+            in_dir, "%s_%s_%s.jpg" % (source_id, obj.obj_id, event_name)
+        )
+        cv2.imwrite(img_path, img_crop)
 
         obj.alarm_check_list = [True] * 2
 
@@ -100,18 +103,18 @@ class IntrusionAlarmGenerator(BaseAlarmGenerator):
             json.dump(obj_dict, json_file, indent=4) 
         
         # ---- save image ---- #
-        # bbox_info = obj.bbox
-        # img_cvt = cv2.cvtColor(img, cv2.COLOR_RGBA2BGRA)
-        # event_name = event.name + "_out"
-        # source_id = event.source_id
+        bbox_info = obj.bbox
+        img_cvt = cv2.cvtColor(img, cv2.COLOR_RGBA2BGRA)
+        event_name = event.name + "_out"
+        source_id = event.source_id
 
-        # # 알람을 일으키는 오브젝트에 대해 crop 한다.
-        # # TODO 이미지 이름 형식에 대한 정의 필요
-        # img_crop = img_cvt[bbox_info[1] : bbox_info[3], bbox_info[0] : bbox_info[2]]
-        # img_path = os.path.join(
-        #     img_dir, "%s_%s_%s.jpg" % (source_id, obj.obj_id, event_name)
-        # )
-        # cv2.imwrite(img_path, img_crop)
+        # 알람을 일으키는 오브젝트에 대해 crop 한다.
+        # TODO 이미지 이름 형식에 대한 정의 필요
+        img_crop = img_cvt[bbox_info[1] : bbox_info[3], bbox_info[0] : bbox_info[2]]
+        img_path = os.path.join(
+            out_dir, "%s_%s_%s.jpg" % (source_id, obj.obj_id, event_name)
+        )
+        cv2.imwrite(img_path, img_crop)
 
         obj.alarm_check_list = [False] * 2
 
