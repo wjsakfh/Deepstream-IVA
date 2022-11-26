@@ -43,19 +43,19 @@
 
 - 코드는 크게 `core` 디렉토리, `dto` 디렉토리, `main.py`로 이루어진다.
 - `core` 디렉토리
-    - `[algorithms.py](http://algorithms.py)` : roi내외판정 알고리즘을 포함
-    - `[generator.py](http://generator.py)` : roi 침입 이벤트를 발생시키는 로직
-    - `[manageDB.py](http://manageDB.py)` : inference로부터 메세지를 받고 이를 처리하는 로직
-    - `[reidentifier.py](http://reidentifier.py)`  : re id feature 들의 similarity distance 계산 알고리즘
+    - `algorithms.py` : roi내외판정 알고리즘을 포함
+    - `generator.py` : roi 침입 이벤트를 발생시키는 로직
+    - `manageDB.py` : inference로부터 메세지를 받고 이를 처리하는 로직
+    - `reidentifier.py`  : re id feature 들의 similarity distance 계산 알고리즘
     - `utils.py`
 - `dto` 디렉토리
-    - `[Sources.py](http://Sources.py)` : 여러개의 소스를 시스템이 받게 되는데, 그 소스에 대한 클래스
-    - `[Obj.py](http://Obj.py)` : infernce 결과로부터 추론된 객체가 있는데, 그 객체에 대한 정보와 메소드가 포함된 클래스
-    - `[Ev.py](http://Ev.py)` : Event 설정값에 대한 클래스와 실제 Event에 대한 정보를 담고 있는 클래스
+    - `Sources.py` : 여러개의 소스를 시스템이 받게 되는데, 그 소스에 대한 클래스
+    - `Obj.py` : infernce 결과로부터 추론된 객체가 있는데, 그 객체에 대한 정보와 메소드가 포함된 클래스
+    - `Ev.py` : Event 설정값에 대한 클래스와 실제 Event에 대한 정보를 담고 있는 클래스
 - `main.py`
     - 실제 코드를 동작하기 위한 파일로 argurment로 여러 영상소스 (mp4, rtsp 등)을 받으며 마지막 argument는 탑승과 하차에 대한 객체정보와 이미지를 저장할 디렉토리를 지정한다.
-    - `python3 [main.py](http://main.py) file:///동영상소스절대경로/sample.mp4 file:///동영상소스절대경로/sample2.mp4 output경로`
-        - ex) `python3 [main.py](http://main.py/) file:///opt/workspace/source/C_cam.mp4 out`
+    - `python3 main.py file:///동영상소스절대경로/sample.mp4 file:///동영상소스절대경로/sample2.mp4 output경로`
+        - ex) `python3 main.py file:///opt/workspace/source/C_cam.mp4 out`
 
 ## 주요 설정
 
