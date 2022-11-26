@@ -8,7 +8,7 @@
     
     - [nvcr.io/nvidia/deepstream은](http://nvcr.io/nvidia/deepstream은) nvidia에서 제공하는 deepstream 도커이미지 이름이며, 6.1.1-devel는 최신 버전의 tag이름입니다.
 2. Docker를 Run합니다
-    1. (주의) Run하기 전, 현 위치를 전달받은 폴더(Deepstream-IVA) 위치로 이동해야합니다.
+    1. (주의) Run하기 전, 현 위치를 클론한 위치로 이동해야합니다.
     
     ```
     docker run \
