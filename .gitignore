@@ -1,0 +1,13 @@
+spot_cam.mp4
+*.pyc
+*.so
+*.yml
+*.txt
+*.engine
+*.jpg
+*.mp4
+*.onnx
+Makefile
+*.json
+*.cpp
+*.avi
